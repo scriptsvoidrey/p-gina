@@ -174,7 +174,7 @@
       if (error) throw error;
       scriptForm.reset(); await loadScripts(); notice("Script publicado en la sección Scripts.");
     } catch(err) { notice(err.message || "No se pudo publicar el script."); }
-    finally { button.disabled=false; button.textContent="Publicar en Scripts"; }
+    finally { button.disabled=false; button.textContent="Publicar"; }
   });
 
   // Subida y feed público mediante Supabase Storage + Postgres
@@ -261,7 +261,7 @@
       }
       form.reset(); resetPreview(); await loadFeed(); notice("¡Publicación compartida con toda la comunidad!");
     } catch (err) { notice(err.message || "No se pudo publicar. Inténtalo de nuevo."); }
-    finally { submit.disabled = false; submit.textContent = "Publicar para todos"; }
+    finally { submit.disabled = false; submit.textContent = "Publicar"; }
   });
 
   // Soporte: no simular envíos sin un canal real conectado
