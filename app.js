@@ -96,7 +96,7 @@
       let result;
       try {
         result = mode === "signup"
-          ? await client.auth.signUp({ email, password, options:{ data:{ display_name:name || email.split("@")[0] } } })
+          ? await client.auth.signUp({ email, password, options:{ emailRedirectTo: window.location.origin + "/", data:{ display_name:name || email.split("@")[0] } } })
           : await client.auth.signInWithPassword({ email, password });
         if (result.error) throw result.error;
         $("#auth-feedback", modal).textContent = mode === "signup"
