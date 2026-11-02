@@ -60,44 +60,24 @@
       <!-- SCRIPTS -->
       <section class="panel" id="panel-scripts">
         <h2 class="section-title">Scripts disponibles</h2>
-        <div class="script-grid" id="script-list">
-          <div class="script-card">
-            <div class="script-icon">⚔️</div>
-            <h3>Duelos</h3>
-            <p>Actualizaciones semanales</p>
-            <button class="btn-sm">Abrir</button>
-          </div>
-          <div class="script-card">
-            <div class="script-icon">🔥</div>
-            <h3>Blood Strike</h3>
-            <p>Ranked · Salas · Boost</p>
-            <button class="btn-sm">Abrir</button>
-          </div>
-          <div class="script-card">
-            <div class="script-icon">🎯</div>
-            <h3>Aim Assist</h3>
-            <p>Configuración ligera</p>
-            <button class="btn-sm">Abrir</button>
-          </div>
-          <div class="script-card">
-            <div class="script-icon">⚡</div>
-            <h3>Performance+</h3>
-            <p>Para dispositivos bajos</p>
-            <button class="btn-sm">Abrir</button>
-          </div>
-          <div class="script-card">
-            <div class="script-icon">📦</div>
-            <h3>Pack Extra</h3>
-            <p>Utilidades varias</p>
-            <button class="btn-sm">Abrir</button>
-          </div>
-        </div>
+        <p class="hint">Scripts publicados por la comunidad. Abre uno para ver y copiar su código.</p>
+        <div class="script-grid" id="script-list"><div class="empty-feed">Todavía no hay scripts publicados.</div></div>
       </section>
 
       <!-- UPLOAD / COMMUNITY FEED -->
       <section class="panel" id="panel-upload">
-        <h2 class="section-title">Subir contenido</h2>
-        <p class="hint">Todo lo que subas aquí es público para toda la comunidad.</p>
+        <h2 class="section-title">Publicar en VOID</h2>
+        <p class="hint">Comparte un script en la biblioteca o una foto/video en el feed público.</p>
+        <section class="card script-publish">
+          <h3>Publicar un script</h3>
+          <form id="script-upload-form" class="upload-form compact-form">
+            <label>Nombre del script<input type="text" id="script-title" maxlength="80" placeholder="Ej: Mi script de utilidad" required></label>
+            <label>Descripción<textarea id="script-description" maxlength="400" rows="2" placeholder="Qué hace este script..."></textarea></label>
+            <label>Código del script<textarea id="script-code" class="code-input" rows="9" spellcheck="false" placeholder="Pega aquí tu código..." required></textarea></label>
+            <button type="submit" class="btn-primary" id="btn-script-upload">Publicar en Scripts</button>
+          </form>
+        </section>
+        <h3 class="feed-title">Publicar foto o video</h3>
 
         <form class="upload-form" id="upload-form">
           <label>
