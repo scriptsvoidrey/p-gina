@@ -1,7 +1,7 @@
-// Configuración pública del cliente Supabase.
-// Sustituye estos dos valores por Project URL y anon/public key.
-// Esta clave pública está diseñada para el navegador; la seguridad depende de RLS.
+// Configuración pública de Supabase para VOID Hub.
+// La publishable key está diseñada para usarse en el navegador.
+// La seguridad de los datos depende de las políticas RLS del proyecto.
 window.VOID_SUPABASE = {
-  url: "https://TU-PROYECTO.supabase.co",
-  anonKey: "TU-CLAVE-ANON-PUBLICA"
+  url: "https://uemhnjtazvrrzbqvruhv.supabase.co",
+  anonKey: "sb_publishable_V1YPndiy9OaAzVQUH65gOA_VitPit3j"
 };
