@@ -595,3 +595,14 @@ html, body {
 .auth-form label { color:var(--muted); font-size:13px; font-weight:600; }
 .auth-form input { width:100%; padding:12px; border:1px solid var(--border); border-radius:10px; background:var(--surface2); color:var(--text); font:inherit; }
 .auth-form button:disabled, .upload-form button:disabled { opacity:.6; cursor:wait; }
+
+/* VOID scripts library and ownership controls */
+.script-publish { margin-bottom:22px; }
+.compact-form { margin:14px 0 0; padding:0; border:0; background:transparent; }
+.upload-form textarea.code-input { min-height:180px; font-family:var(--mono); font-size:12px; line-height:1.55; }
+.script-info { min-width:0; }
+.script-info p { overflow-wrap:anywhere; }
+.script-info small { color:var(--muted); font-size:11px; }
+.script-code-view { max-height:45vh; overflow:auto; padding:14px; border:1px solid var(--border); border-radius:12px; background:var(--bg); white-space:pre-wrap; overflow-wrap:anywhere; font:12px/1.6 var(--mono); color:var(--text); }
+.danger-btn { color:var(--danger); border-color:color-mix(in srgb,var(--danger) 50%,var(--border)); margin-top:8px; }
+.script-card { grid-template-columns:auto minmax(0,1fr) auto; }
