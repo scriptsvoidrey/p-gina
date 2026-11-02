@@ -67,18 +67,7 @@
       <!-- UPLOAD / COMMUNITY FEED -->
       <section class="panel" id="panel-upload">
         <h2 class="section-title">Publicar en VOID</h2>
-        <p class="hint">Comparte un script en la biblioteca o una foto/video en el feed público.</p>
-        <section class="card script-publish">
-          <h3>Publicar un script</h3>
-          <form id="script-upload-form" class="upload-form compact-form">
-            <label>Nombre del script<input type="text" id="script-title" maxlength="80" placeholder="Ej: Mi script de utilidad" required></label>
-            <label>Descripción<textarea id="script-description" maxlength="400" rows="2" placeholder="Qué hace este script..."></textarea></label>
-            <label>Código del script<textarea id="script-code" class="code-input" rows="9" spellcheck="false" placeholder="Pega aquí tu código..." required></textarea></label>
-            <button type="submit" class="btn-primary" id="btn-script-upload">Publicar</button>
-          </form>
-        </section>
-        <h3 class="feed-title">Publicar foto o video</h3>
-
+        <p class="hint">Comparte fotos, videos y scripts con la comunidad desde aquí.</p>
         <form class="upload-form" id="upload-form">
           <label>
             Título
@@ -99,8 +88,18 @@
           <div class="preview" id="preview" hidden></div>
           <button type="submit" class="btn-primary" id="btn-upload">Publicar</button>
         </form>
+        <section class="card script-publish">
+          <h3>Publicar un script</h3>
+          <form id="script-upload-form" class="upload-form compact-form">
+            <label>Nombre del script<input type="text" id="script-title" maxlength="80" placeholder="Ej: Mi script de utilidad" required></label>
+            <label>Descripción<textarea id="script-description" maxlength="400" rows="2" placeholder="Qué hace este script..."></textarea></label>
+            <label>Código del script<textarea id="script-code" class="code-input" rows="9" spellcheck="false" placeholder="Pega aquí tu código..." required></textarea></label>
+            <button type="submit" class="btn-primary" id="btn-script-upload">Publicar</button>
+          </form>
+        </section>
 
-        <h3 class="feed-title">Feed público</h3>
+
+        <h3 class="feed-title">Publicaciones de la comunidad</h3>
         <div class="feed" id="feed">
           <!-- posts rendered by JS -->
         </div>
