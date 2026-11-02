@@ -52,7 +52,7 @@
           <h2>Sobre VOID Hub</h2>
           <p>Espacio creado para compartir scripts, clips y herramientas de la comunidad.</p>
           <p>Encuentra recursos, comparte contenido y descubre herramientas publicadas por la comunidad.</p>
-          <p>Sube tus videos y fotos, comenta y comparte con todos desde la pestaña <strong>Subir</strong>.</p>
+          <p>Publica scripts y comparte herramientas con la comunidad.</p>
           <p class="thanks">Un espacio para compartir y descubrir.</p>
         </article>
       </section>
@@ -64,11 +64,10 @@
         <div class="script-grid" id="script-list"><div class="empty-feed">Todavía no hay scripts publicados.</div></div>
       </section>
 
-      <!-- UPLOAD / COMMUNITY FEED -->
+      <!-- PUBLICAR SCRIPTS -->
       <section class="panel" id="panel-upload">
-        <h2 class="section-title">Publicar en VOID</h2>
-        <p class="hint">Comparte fotos, videos y scripts con la comunidad desde aquí.</p>
-
+        <h2 class="section-title">Publicar scripts</h2>
+        <p class="hint">Comparte tus scripts y herramientas con la comunidad.</p>
         <section class="card script-publish">
           <h3>Publicar un script</h3>
           <form id="script-upload-form" class="upload-form compact-form">
@@ -78,26 +77,6 @@
             <button type="submit" class="btn-primary" id="btn-script-upload">Publicar</button>
           </form>
         </section>
-
-        <form id="upload-form" class="upload-form">
-          <div class="media-kind" role="group" aria-label="Tipo de publicación">
-            <button type="button" class="media-kind-btn active" data-media-kind="image" aria-pressed="true">Fotos</button>
-            <button type="button" class="media-kind-btn" data-media-kind="video" aria-pressed="false">Videos</button>
-          </div>
-          <label>Título<input type="text" id="up-title" maxlength="80" placeholder="¿Qué quieres compartir?" required></label>
-          <label>Descripción<textarea id="up-comment" maxlength="400" rows="3" placeholder="Añade un comentario (opcional)"></textarea></label>
-          <label class="file-zone" id="file-zone">
-            <input type="file" id="up-file" accept="image/*">
-            <span class="zone-inner"><span class="zone-icon">＋</span><strong id="file-zone-title">Selecciona o arrastra tus fotos</strong><small id="file-zone-help">JPG, PNG, WEBP o GIF · máximo 4 MB</small></span>
-          </label>
-          <div class="preview" id="preview" hidden></div>
-          <button class="btn-primary" type="submit" id="btn-upload">Publicar</button>
-        </form>
-
-        <h3 class="feed-title">Publicaciones de la comunidad</h3>
-        <div class="feed" id="feed">
-          <!-- posts rendered by JS -->
-        </div>
       </section>
 
       <!-- COMMUNITY -->
@@ -173,7 +152,7 @@
       </button>
       <button class="nav-item upload-btn" data-panel="upload">
         <span class="ico">＋</span>
-        <span>Subir</span>
+        <span>Publicar</span>
       </button>
       <button class="nav-item" data-panel="community">
         <span class="ico">◎</span>
