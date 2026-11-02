@@ -12,7 +12,6 @@
   } catch (error) { console.error("Supabase:", error); }
   const LOCAL_NAME_KEY = "void-local-name";
   const LOCAL_SCRIPTS_KEY = "void-local-scripts";
-  const LOCAL_POSTS_KEY = "void-local-posts";
   const LOCAL_ID_KEY = "void-local-id";
 
   function getLocalId() {
@@ -47,17 +46,7 @@
     localStorage.setItem(LOCAL_SCRIPTS_KEY, JSON.stringify(list));
   }
 
-  function loadLocalPosts() {
-    try {
-      return JSON.parse(localStorage.getItem(LOCAL_POSTS_KEY) || "[]");
-    } catch {
-      return [];
-    }
-  }
 
-  function saveLocalPosts(list) {
-    localStorage.setItem(LOCAL_POSTS_KEY, JSON.stringify(list));
-  }
 
   let currentFile = null;
   let previewUrl = null;
@@ -69,7 +58,6 @@
     panels.forEach(p => p.classList.toggle("active", p.id === `panel-${id}`));
     navItems.forEach(n => n.classList.toggle("active", n.dataset.panel === id));
     window.scrollTo({ top: 0, behavior: "smooth" });
-    if (id === "upload") loadFeed();
     if (id === "scripts") loadScripts();
   }
   navItems.forEach(btn => btn.addEventListener("click", () => showPanel(btn.dataset.panel)));
@@ -150,14 +138,45 @@
     const status = $("#account-status");
     if (status) status.textContent = currentUser ? "Sesión iniciada como " + getLocalName() : "No has iniciado sesión";
   }
-  function authModal() {
+  function authModal(initialTab = "register") {
     if (!supabaseClient) return notice("No se pudo conectar con el servicio de cuentas. Revisa la configuración de Supabase.");
-    const markup = '<p class="note">Inicia sesión con el nombre de usuario y la contraseña de tu cuenta.</p>' +
-      '<form id="login-form" class="auth-form"><label>Nombre de usuario<input id="login-name" type="text" maxlength="24" autocomplete="username" placeholder="Tu nombre de usuario" required></label>' +
+    const markup = '<p class="note">Crea tu cuenta con un nombre de usuario y contraseña, o entra si ya tienes una.</p>' +
+      '<div class="auth-tabs"><button type="button" class="btn-sm auth-tab" data-auth-tab="register">Crear cuenta</button><button type="button" class="btn-sm auth-tab" data-auth-tab="login">Iniciar sesión</button></div>' +
+      '<form id="register-form" class="auth-form"><label>Nombre de usuario<input id="register-name" type="text" minlength="3" maxlength="24" autocomplete="username" placeholder="Tu nombre" required pattern="[A-Za-z0-9_.-]+"></label>' +
+      '<label>Contraseña<input id="register-password" type="password" minlength="8" autocomplete="new-password" placeholder="Mínimo 8 caracteres" required></label>' +
+      '<button class="btn-primary" type="submit">Crear mi cuenta</button></form>' +
+      '<form id="login-form" class="auth-form" hidden><label>Nombre de usuario<input id="login-name" type="text" maxlength="24" autocomplete="username" placeholder="Tu nombre de usuario" required></label>' +
       '<label>Contraseña<input id="login-password" type="password" autocomplete="current-password" placeholder="Tu contraseña" required></label><button class="btn-primary" type="submit">Entrar</button></form>' +
       '<p id="auth-message" class="note" role="status" aria-live="polite"></p>';
-    const modal = openModal("Iniciar sesión", markup);
-    const loginForm = $("#login-form", modal), message = $("#auth-message", modal);
+    const modal = openModal("Tu cuenta P-GINA", markup);
+    const registerForm = $("#register-form", modal), loginForm = $("#login-form", modal), message = $("#auth-message", modal);
+    const setTab = tab => {
+      registerForm.hidden = tab !== "register"; loginForm.hidden = tab !== "login";
+      modal.querySelectorAll("[data-auth-tab]").forEach(b => b.classList.toggle("active", b.dataset.authTab === tab));
+      message.textContent = "";
+    };
+    modal.querySelectorAll("[data-auth-tab]").forEach(b => b.addEventListener("click", () => setTab(b.dataset.authTab)));
+    registerForm.addEventListener("submit", async event => {
+      event.preventDefault();
+      const name = $("#register-name", modal).value.trim(), password = $("#register-password", modal).value;
+      if (!/^[A-Za-z0-9_.-]{3,24}$/.test(name)) { message.textContent = "El usuario debe tener 3–24 caracteres: letras, números, punto, guion o guion bajo."; return; }
+      if (password.length < 8) { message.textContent = "La contraseña debe tener al menos 8 caracteres."; return; }
+      const submit = registerForm.querySelector('button[type="submit"]');
+      submit.disabled = true; submit.textContent = "Creando cuenta…";
+      try {
+        const result = await supabaseClient.auth.signUp({ email: usernameToEmail(name), password, options: { data: { display_name: name } } });
+        if (result.error) throw result.error;
+        if (!result.data.session) {
+          message.textContent = "La cuenta se creó, pero Supabase exige confirmar el correo. Para usar solo usuario y contraseña, desactiva Confirm email en Supabase → Authentication → Sign In / Providers → Email y vuelve a intentarlo.";
+          return;
+        }
+        currentUser = result.data.user; localStorage.setItem(LOCAL_NAME_KEY, name);
+        updateAccountUI(); modal.remove(); notice("¡Cuenta creada! Ya puedes usar P-GINA.");
+      } catch (error) {
+        console.error("Error creando cuenta:", error);
+        message.textContent = error.message || error.msg || "No se pudo crear la cuenta. Inténtalo de nuevo.";
+      } finally { submit.disabled = false; submit.textContent = "Crear mi cuenta"; }
+    });
     loginForm.addEventListener("submit", async event => {
       event.preventDefault();
       const name = $("#login-name", modal).value.trim(), password = $("#login-password", modal).value;
@@ -169,9 +188,12 @@
         if (result.error) throw result.error;
         currentUser = result.data.user; localStorage.setItem(LOCAL_NAME_KEY, currentUser.user_metadata?.display_name || name);
         updateAccountUI(); modal.remove(); notice("Sesión iniciada. ¡Bienvenido a P-GINA!");
-      } catch (error) { message.textContent = "No se pudo iniciar sesión. Comprueba tu nombre y contraseña."; }
-      finally { submit.disabled = false; submit.textContent = "Entrar"; }
+      } catch (error) {
+        console.error("Error iniciando sesión:", error);
+        message.textContent = error.message || "No se pudo iniciar sesión. Comprueba tu nombre y contraseña.";
+      } finally { submit.disabled = false; submit.textContent = "Entrar"; }
     });
+    setTab(initialTab);
   }
   async function signOut() {
     if (!supabaseClient || !currentUser) { authModal(); return; }
@@ -192,7 +214,7 @@
       updateAccountUI();
     });
     supabaseClient.auth.getSession().then(({ data }) => {
-      currentUser = data.session?.user || null; updateAccountUI(); loadFeed(); loadScripts();
+      currentUser = data.session?.user || null; updateAccountUI(); loadScripts();
     }).catch(error => console.error("Error recuperando sesión:", error));
   }
 
@@ -292,158 +314,6 @@
     }
   });
 
-  // ——— Feed y publicaciones (localStorage + data URLs) ———
-  const form = $("#upload-form");
-  const fileInput = $("#up-file");
-  const fileZone = $("#file-zone");
-  const preview = $("#preview");
-  const feed = $("#feed");
-
-  function resetPreview() {
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-    previewUrl = null;
-    currentFile = null;
-    if (preview) {
-      preview.hidden = true;
-      preview.replaceChildren();
-    }
-  }
-
-  function handleFile(file) {
-    if (!file) return;
-    if (selectedMediaKind === "image" && !file.type.startsWith("image/")) return notice("Selecciona una foto en la opción Fotos.");
-    if (selectedMediaKind === "video" && !file.type.startsWith("video/")) return notice("Selecciona un video en la opción Videos.");
-    if (file.size > 4 * 1024 * 1024) return notice("El archivo supera el límite de 4 MB para el almacenamiento local.");
-    resetPreview();
-    currentFile = file;
-    previewUrl = URL.createObjectURL(file);
-    const media = document.createElement(file.type.startsWith("video/") ? "video" : "img");
-    media.src = previewUrl;
-    if (media.tagName === "VIDEO") {
-      media.controls = true;
-      media.playsInline = true;
-    } else {
-      media.alt = "Vista previa";
-    }
-    preview.replaceChildren(media);
-    preview.hidden = false;
-  }
-
-  let selectedMediaKind = "image";
-  const mediaKindButtons = $$(".media-kind-btn");
-  const zoneTitle = $("#file-zone-title");
-  const zoneHelp = $("#file-zone-help");
-  mediaKindButtons.forEach(button => button.addEventListener("click", () => {
-    selectedMediaKind = button.dataset.mediaKind;
-    mediaKindButtons.forEach(item => {
-      const active = item === button;
-      item.classList.toggle("active", active);
-      item.setAttribute("aria-pressed", String(active));
-    });
-    resetPreview();
-    if (fileInput) {
-      fileInput.value = "";
-      fileInput.accept = selectedMediaKind === "video" ? "video/*" : "image/*";
-    }
-    if (zoneTitle) zoneTitle.textContent = selectedMediaKind === "video" ? "Selecciona o arrastra tus videos" : "Selecciona o arrastra tus fotos";
-    if (zoneHelp) zoneHelp.textContent = selectedMediaKind === "video" ? "MP4, WEBM y otros formatos de video" : "JPG, PNG y otros formatos de imagen";
-  }));
-
-  fileInput?.addEventListener("change", () => handleFile(fileInput.files?.[0]));
-  ["dragenter", "dragover"].forEach(ev => fileZone?.addEventListener(ev, e => {
-    e.preventDefault();
-    fileZone.classList.add("drag");
-  }));
-  ["dragleave", "drop"].forEach(ev => fileZone?.addEventListener(ev, e => {
-    e.preventDefault();
-    fileZone.classList.remove("drag");
-  }));
-  fileZone?.addEventListener("drop", e => handleFile(e.dataTransfer.files?.[0]));
-
-  function fileToDataURL(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = () => reject(new Error("No se pudo leer el archivo"));
-      reader.readAsDataURL(file);
-    });
-  }
-
-  function renderPosts(posts) {
-    const postCount = $("#stat-members");
-    if (postCount) postCount.textContent = String(posts.length);
-    if (!posts.length) {
-      feed.innerHTML = '<div class="empty-feed">Todavía no hay publicaciones.<br>¡Comparte la primera!</div>';
-      return;
-    }
-    const myId = getLocalId();
-    feed.innerHTML = posts.map(p => {
-      const media = p.media_type === "video"
-        ? `<video src="${escapeHtml(p.media_url)}" controls playsinline preload="metadata"></video>`
-        : `<img src="${escapeHtml(p.media_url)}" alt="${escapeHtml(p.title)}" loading="lazy">`;
-      const own = p.author_id === myId;
-      return `<article class="post">
-        <div class="post-media">${media}</div>
-        <div class="post-body">
-          <h4>${escapeHtml(p.title)}</h4>
-          ${p.comment ? `<p>${escapeHtml(p.comment)}</p>` : ""}
-          <div class="post-meta">${escapeHtml(p.author_name || "Usuario VOID")} · ${escapeHtml(formatDate(p.created_at))}</div>
-          ${own ? `<button class="btn-sm danger-btn" type="button" data-delete-post="${p.id}">Eliminar publicación</button>` : ""}
-        </div>
-      </article>`;
-    }).join("");
-
-    feed.querySelectorAll("[data-delete-post]").forEach(b => b.addEventListener("click", async () => {
-      if (!await askConfirm("¿Eliminar tu publicación?", "Eliminar publicación")) return;
-      const list = loadLocalPosts().filter(p => p.id !== b.dataset.deletePost);
-      saveLocalPosts(list);
-      renderPosts(list);
-      notice("Publicación eliminada.");
-    }));
-  }
-
-  function loadFeed() {
-    if (!feed) return;
-    const posts = loadLocalPosts();
-    renderPosts(posts);
-  }
-
-  form?.addEventListener("submit", async e => {
-    e.preventDefault();
-    if (!currentUser) return authModal("register");
-    if (!currentFile) return notice("Selecciona una foto o un video primero.");
-    const title = $("#up-title").value.trim();
-    const comment = $("#up-comment").value.trim();
-    if (!title) return notice("Escribe un título para la publicación.");
-    const submit = $("#btn-upload");
-    submit.disabled = true;
-    submit.textContent = "Publicando…";
-    try {
-      const dataUrl = await fileToDataURL(currentFile);
-      const list = loadLocalPosts();
-      list.unshift({
-        id: crypto.randomUUID(),
-        author_id: getLocalId(),
-        author_name: getLocalName(),
-        title,
-        comment,
-        media_url: dataUrl,
-        media_type: currentFile.type.startsWith("video/") ? "video" : "image",
-        created_at: new Date().toISOString()
-      });
-      saveLocalPosts(list);
-      form.reset();
-      resetPreview();
-      loadFeed();
-      notice("¡Publicación guardada en este dispositivo!");
-    } catch (err) {
-      notice(err.message || "No se pudo guardar. Inténtalo de nuevo.");
-    } finally {
-      submit.disabled = false;
-      submit.textContent = "Publicar";
-    }
-  });
-
   // Soporte
   $("#btn-send-support")?.addEventListener("click", async () => {
     const message = $("#support-msg")?.value.trim();
@@ -467,7 +337,6 @@
   // Inicio
   function init() {
     updateAccountUI();
-    loadFeed();
     loadScripts();
   }
   init();
