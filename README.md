@@ -12,6 +12,14 @@ Hub estático de scripts y comunidad. Mantiene la interfaz existente (Outfit, te
 6. En **Authentication → URL Configuration**, agrega `https://p-gina-sigma.vercel.app` como Site URL y también en Redirect URLs.
 7. Sube los cambios a la rama principal de GitHub. Vercel desplegará automáticamente al detectar el commit.
 
+## Biblioteca de scripts y publicaciones
+
+- Publica scripts con título, descripción y código desde Subir; aparecen en Scripts para todos.
+- Al abrir un script se muestra el código con botón Copiar código.
+- Cada usuario puede eliminar sus propios scripts y publicaciones; las políticas RLS impiden borrar contenido ajeno.
+- Las fotos y videos se suben al bucket público `void-media` y se muestran en el feed.
+- Ejecuta de nuevo el SQL actualizado en `supabase-setup.sql` para crear la tabla `scripts` y sus políticas.
+
 ## Qué queda conectado
 
 - Registro e inicio de sesión por correo y contraseña.
