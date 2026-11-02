@@ -34,7 +34,28 @@
     document.documentElement.setAttribute("data-theme", themeSelect.value === "void" ? "" : themeSelect.value);
   });
 
-  function notice(message) { window.alert(message); }
+  function notice(message, title = "VOID Hub") { showDialog(title, message, false); }
+  function askConfirm(message, title = "Confirmar acción") { return showDialog(title, message, true); }
+  function showDialog(title, message, confirmMode) {
+    return new Promise(resolve => {
+      $("#void-modal")?.remove();
+      const modal=document.createElement("div"); modal.id="void-modal"; modal.className="void-modal";
+      const backdrop=document.createElement("div"); backdrop.className="void-modal-backdrop";
+      const card=document.createElement("section"); card.className="void-modal-card"; card.setAttribute("role","dialog"); card.setAttribute("aria-modal","true");
+      const close=document.createElement("button"); close.className="void-modal-close"; close.type="button"; close.textContent="×"; close.setAttribute("aria-label","Cerrar");
+      const heading=document.createElement("h2"); heading.textContent=title;
+      const body=document.createElement("div"); body.className="void-modal-body";
+      const content=document.createElement("div"); content.className="notice-content";
+      const mark=document.createElement("span"); mark.className="notice-mark"+(confirmMode?" warning":""); mark.textContent=confirmMode?"!":"✓";
+      const p=document.createElement("p"); p.textContent=message; content.append(mark,p); body.append(content);
+      const actions=document.createElement("div"); actions.className="modal-actions";
+      const finish=value=>{modal.remove();resolve(value);};
+      close.addEventListener("click",()=>finish(false)); backdrop.addEventListener("click",()=>finish(false));
+      if(confirmMode){const cancel=document.createElement("button");cancel.className="btn-sm";cancel.textContent="Cancelar";cancel.addEventListener("click",()=>finish(false));actions.append(cancel);}
+      const ok=document.createElement("button");ok.className="btn-primary";ok.textContent=confirmMode?"Sí, continuar":"Entendido";ok.addEventListener("click",()=>finish(confirmMode));actions.append(ok);
+      card.append(close,heading,body,actions);modal.append(backdrop,card);document.body.append(modal);
+    });
+  }
   function escapeHtml(value) {
     return String(value ?? "").replace(/[&<>"']/g, c => ({
       "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
@@ -148,7 +169,7 @@
       $(".void-modal-body", modal).append(copy);
     }));
     scriptList.querySelectorAll("[data-delete-script]").forEach(b => b.addEventListener("click", async () => {
-      if (!currentUser || !confirm("¿Eliminar este script? Esta acción no se puede deshacer.")) return;
+      if (!currentUser || !await askConfirm("¿Eliminar este script? Esta acción no se puede deshacer.", "Eliminar script")) return;
       const { error } = await client.from("scripts").delete().eq("id", b.dataset.deleteScript).eq("author_id", currentUser.id);
       if (error) return notice("No se pudo eliminar: " + error.message);
       await loadScripts();
@@ -219,7 +240,7 @@
       </div></article>`;
     }).join("");
     feed.querySelectorAll("[data-delete-post]").forEach(b => b.addEventListener("click", async () => {
-      if (!currentUser || !confirm("¿Eliminar tu publicación y su archivo?")) return;
+      if (!currentUser || !await askConfirm("¿Eliminar tu publicación y su archivo?", "Eliminar publicación")) return;
       const post=posts.find(p=>p.id===b.dataset.deletePost);
       const {error}=await client.from("posts").delete().eq("id",post.id).eq("author_id",currentUser.id);
       if(error) return notice("No se pudo eliminar: "+error.message);
