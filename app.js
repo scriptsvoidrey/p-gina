@@ -222,7 +222,7 @@
     preview.replaceChildren(media); preview.hidden = false;
   }
   let selectedMediaKind = "image";
-  const mediaKindButtons = $(".media-kind-btn");
+  const mediaKindButtons = $$(".media-kind-btn");
   const zoneTitle = $("#file-zone-title");
   const zoneHelp = $("#file-zone-help");
   mediaKindButtons.forEach(button => button.addEventListener("click", () => {
