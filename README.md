@@ -1,44 +1,43 @@
-# VOID Hub
+# P-GINA / VOID Hub
 
-Hub estático de scripts y comunidad. Mantiene la interfaz existente (Outfit, temas y menú inferior) y utiliza Supabase para autenticación, feed público y archivos multimedia.
+Aplicación web estática con navegación inferior, biblioteca local de scripts, publicaciones locales y autenticación de usuarios mediante Supabase Auth.
 
-## Estado de conexión
+## Cuentas
 
-El proyecto Supabase conectado es `p-gina`. La configuración pública está en `supabase-config.js`; la base de datos ya tiene las tablas `posts` y `scripts`, políticas RLS y el bucket público `void-media`.
+- El usuario crea su cuenta con un nombre de usuario, contraseña y confirmación de contraseña.
+- Para iniciar sesión solo necesita el nombre de usuario y la contraseña.
+- El nombre admite entre 3 y 24 caracteres: letras ASCII, números, punto, guion y guion bajo.
+- La contraseña debe tener al menos 8 caracteres.
+- Supabase Auth gestiona las credenciales y la sesión; la contraseña nunca se guarda en localStorage.
+- El nombre se convierte internamente en un identificador de correo técnico bajo el dominio reservado `.invalid`; no se solicita un correo real.
+- En Supabase → Authentication → Providers → Email, desactiva la confirmación de correo electrónico. Si está activa, Supabase no puede iniciar sesión con el correo técnico reservado y el registro mostrará una advertencia.
+- Como no se solicita un correo real, no hay recuperación de contraseña por correo. El usuario debe recordar su contraseña.
 
 ## Configuración de Supabase
 
-1. En **Authentication → Providers → Email**, habilita Email.
-2. En **Authentication → URL Configuration**, agrega `https://p-gina-sigma.vercel.app` como Site URL y también en Redirect URLs.
-3. Para pruebas puedes desactivar la confirmación de email; en producción es mejor mantenerla y configurar SMTP.
-4. El esquema completo e idempotente está en `supabase-setup.sql`. No necesitas volver a ejecutarlo en el proyecto ya configurado, salvo que estés preparando otro proyecto.
+La configuración pública está en `supabase-config.js`. Solo contiene la URL y la publishable/anon key, que son aptas para el navegador. Nunca pongas la `service_role` o una secret key en el frontend.
 
-## Biblioteca de scripts y publicaciones
+En Authentication → URL Configuration, configura `https://p-gina-sigma.vercel.app` como Site URL y añádela a Redirect URLs.
 
-- Publica scripts con título, descripción y código desde Subir; aparecen en Scripts para todos.
-- Al abrir un script se muestra el código con botón Copiar código.
-- Cada usuario puede eliminar sus propios scripts y publicaciones; las políticas RLS impiden borrar contenido ajeno.
-- Las fotos y videos se suben al bucket público `void-media` y se muestran en el feed.
-- Los archivos tienen un límite de 50 MB y se permiten imágenes JPEG, PNG, WebP, GIF y videos MP4, WebM y QuickTime.
+El esquema `supabase-setup.sql` define las tablas `posts` y `scripts`, sus políticas RLS y el bucket público `void-media`. No hace falta volver a ejecutarlo si el proyecto Supabase ya está preparado.
 
-## Funciones implementadas
+## Funciones actuales
 
-- Registro e inicio de sesión por correo y contraseña.
-- Sesión persistente con Supabase Auth y cierre de sesión.
-- Publicaciones públicas con foto/video en Supabase Storage y metadatos en Postgres.
-- Feed que consulta las últimas 50 publicaciones para todos los visitantes.
-- Botones Abrir de Scripts muestran el código y permiten copiarlo. Los enlaces externos solo deben agregarse cuando exista un destino real.
+- Navegación entre Inicio, Scripts, Subir, Comunidad, Soporte y Ajustes.
+- Registro, inicio y cierre de sesión con Supabase Auth.
+- Validación de contraseña y confirmación al crear la cuenta.
+- Selector de tema persistente.
+- Publicación de scripts y fotos/videos en el almacenamiento local del navegador. Estos datos no se sincronizan entre dispositivos ni usuarios.
+- El botón de soporte copia el mensaje; no hay un canal de soporte conectado todavía.
 
 ## Archivos
 
-- `index.html`: interfaz y carga de dependencias.
-- `style.css`: diseño original más estilos de los diálogos.
-- `app.js`: navegación, autenticación, feed, subida y fichas de scripts.
-- `supabase-config.js`: URL y publishable key públicas del proyecto.
-- `supabase-setup.sql`: tablas, grants, políticas RLS, índices y bucket público.
+- `index.html`: interfaz y controles de la aplicación.
+- `style.css`: estilos.
+- `app.js`: navegación, autenticación y acciones de interfaz.
+- `supabase-config.js`: configuración pública de Supabase.
+- `supabase-setup.sql`: esquema SQL y políticas RLS para la futura sincronización en Supabase.
 
 ## Despliegue
 
-Al fusionar los cambios en `main`, Vercel debe desplegar automáticamente si el proyecto está conectado a este repositorio y esa rama.
-
-**Importante:** las publicaciones antiguas guardadas en localStorage no se migran automáticamente.
+Al integrar los cambios en `main`, Vercel desplegará automáticamente si el proyecto está conectado al repositorio y a esa rama.
