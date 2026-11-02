@@ -149,8 +149,6 @@
     if (button) button.textContent = currentUser ? getLocalName() : "Crear cuenta / Entrar";
     const logout = $("#btn-logout");
     if (logout) logout.textContent = currentUser ? "Cerrar sesión" : "Iniciar sesión";
-    const note = $(".support-box .note");
-    if (note) note.textContent = currentUser ? "Sesión iniciada como " + getLocalName() + "." : "Inicia sesión para identificar tus publicaciones.";
   }
   function authModal(initialTab = "register") {
     if (!supabaseClient) return notice("No se pudo conectar con el servicio de cuentas. Revisa la configuración de Supabase.");
@@ -291,6 +289,7 @@
 
   scriptForm?.addEventListener("submit", e => {
     e.preventDefault();
+    if (!currentUser) return authModal("register");
     const title = $("#script-title").value.trim();
     const description = $("#script-description").value.trim();
     const code = $("#script-code").value.trim();
@@ -439,6 +438,7 @@
 
   form?.addEventListener("submit", async e => {
     e.preventDefault();
+    if (!currentUser) return authModal("register");
     if (!currentFile) return notice("Selecciona una foto o un video primero.");
     const title = $("#up-title").value.trim();
     const comment = $("#up-comment").value.trim();
@@ -473,10 +473,18 @@
   });
 
   // Soporte
-  $("#btn-send-support")?.addEventListener("click", () => {
-    const message = $("#support-msg").value.trim();
+  $("#btn-send-support")?.addEventListener("click", async () => {
+    const message = $("#support-msg")?.value.trim();
     if (!message) return notice("Escribe un mensaje primero.");
-    notice("Modo local: el mensaje no se envía a ningún servidor. Configura un canal de soporte si lo necesitas.");
+    try {
+      await navigator.clipboard.writeText(message);
+      notice("Mensaje copiado. Todavía no hay un canal de soporte conectado.");
+    } catch {
+      const area = document.createElement("textarea");
+      area.value = message; document.body.append(area); area.select();
+      const copied = document.execCommand("copy"); area.remove();
+      notice(copied ? "Mensaje copiado. Todavía no hay un canal de soporte conectado." : "No se pudo copiar el mensaje.");
+    }
   });
 
   // Idioma
