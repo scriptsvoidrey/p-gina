@@ -79,6 +79,21 @@
           </form>
         </section>
 
+        <form id="upload-form" class="upload-form">
+          <div class="media-kind" role="group" aria-label="Tipo de publicación">
+            <button type="button" class="media-kind-btn active" data-media-kind="image" aria-pressed="true">Fotos</button>
+            <button type="button" class="media-kind-btn" data-media-kind="video" aria-pressed="false">Videos</button>
+          </div>
+          <label>Título<input type="text" id="up-title" maxlength="80" placeholder="¿Qué quieres compartir?" required></label>
+          <label>Descripción<textarea id="up-comment" maxlength="400" rows="3" placeholder="Añade un comentario (opcional)"></textarea></label>
+          <label class="file-zone" id="file-zone">
+            <input type="file" id="up-file" accept="image/*">
+            <span class="zone-inner"><span class="zone-icon">＋</span><strong id="file-zone-title">Selecciona o arrastra tus fotos</strong><small id="file-zone-help">JPG, PNG, WEBP o GIF · máximo 4 MB</small></span>
+          </label>
+          <div class="preview" id="preview" hidden></div>
+          <button class="btn-primary" type="submit" id="btn-upload">Publicar</button>
+        </form>
+
         <h3 class="feed-title">Publicaciones de la comunidad</h3>
         <div class="feed" id="feed">
           <!-- posts rendered by JS -->
