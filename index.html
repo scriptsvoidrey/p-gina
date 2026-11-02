@@ -1,1 +1,182 @@
-PLACEHOLDER_INDEX
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0e17" />
+  <title>VOID · Scripts Hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <!-- Top bar -->
+    <header class="topbar">
+      <div class="brand">
+        <span class="logo-mark">V</span>
+        <div>
+          <strong>VOID HUB</strong>
+          <small>scripts · community</small>
+        </div>
+      </div>
+      <button class="pill" id="btn-account">Tu nombre</button>
+    </header>
+
+    <!-- Main content area -->
+    <main class="content" id="main">
+      <!-- HOME -->
+      <section class="panel active" id="panel-home">
+        <div class="hero">
+          <h1>Bienvenido a <span>VOID</span></h1>
+          <p>Hub de scripts, comunidad y herramientas. Diseño limpio, sin ruido.</p>
+        </div>
+
+        <div class="stats">
+          <div class="stat">
+            <span class="num" id="stat-scripts">5</span>
+            <span class="lbl">Scripts</span>
+          </div>
+          <div class="stat">
+            <span class="num">VOID</span>
+            <span class="lbl">Plataforma</span>
+          </div>
+          <div class="stat">
+            <span class="num" id="stat-members">0</span>
+            <span class="lbl">Publicaciones</span>
+          </div>
+        </div>
+
+        <article class="card about">
+          <h2>Sobre VOID Hub</h2>
+          <p>Espacio creado para compartir scripts, clips y herramientas de la comunidad.</p>
+          <p>Encuentra recursos, comparte contenido y descubre herramientas publicadas por la comunidad.</p>
+          <p>Sube tus videos y fotos, comenta y comparte con todos desde la pestaña <strong>Subir</strong>.</p>
+          <p class="thanks">Un espacio para compartir y descubrir.</p>
+        </article>
+      </section>
+
+      <!-- SCRIPTS -->
+      <section class="panel" id="panel-scripts">
+        <h2 class="section-title">Scripts disponibles</h2>
+        <p class="hint">Scripts publicados por la comunidad. Abre uno para ver y copiar su código.</p>
+        <div class="script-grid" id="script-list"><div class="empty-feed">Todavía no hay scripts publicados.</div></div>
+      </section>
+
+      <!-- UPLOAD / COMMUNITY FEED -->
+      <section class="panel" id="panel-upload">
+        <h2 class="section-title">Publicar en VOID</h2>
+        <p class="hint">Comparte fotos, videos y scripts con la comunidad desde aquí.</p>
+
+        <section class="card script-publish">
+          <h3>Publicar un script</h3>
+          <form id="script-upload-form" class="upload-form compact-form">
+            <label>Nombre del script<input type="text" id="script-title" maxlength="80" placeholder="Ej: Mi script de utilidad" required></label>
+            <label>Descripción<textarea id="script-description" maxlength="400" rows="2" placeholder="Qué hace este script..."></textarea></label>
+            <label>Código del script<textarea id="script-code" class="code-input" rows="9" spellcheck="false" placeholder="Pega aquí tu código..." required></textarea></label>
+            <button type="submit" class="btn-primary" id="btn-script-upload">Publicar</button>
+          </form>
+        </section>
+
+        <h3 class="feed-title">Publicaciones de la comunidad</h3>
+        <div class="feed" id="feed">
+          <!-- posts rendered by JS -->
+        </div>
+      </section>
+
+      <!-- COMMUNITY -->
+      <section class="panel" id="panel-community">
+        <h2 class="section-title">Comunidad</h2>
+        <div class="card discord">
+          <h3>Discord</h3>
+          <p>Únete a la comunidad, comparte clips y recibe anuncios.</p>
+          <p class="note">El enlace oficial de invitación se publicará aquí cuando esté disponible.</p>
+        </div>
+      </section>
+
+      <!-- SUPPORT -->
+      <section class="panel" id="panel-support">
+        <h2 class="section-title">Soporte</h2>
+        <div class="card support-box">
+          <div class="status">
+            <span class="dot offline"></span>
+            <span>Sin conexión · Conéctate al soporte</span>
+          </div>
+          <textarea id="support-msg" placeholder="Escribe tu mensaje (0/500)" maxlength="500" rows="4"></textarea>
+          <button class="btn-primary" id="btn-send-support">Enviar mensaje</button>
+          <p class="note">Modo local activo. Los datos se guardan solo en este navegador.</p>
+        </div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section class="panel" id="panel-settings">
+        <h2 class="section-title">Ajustes</h2>
+        <div class="card settings">
+          <div class="setting-row">
+            <div>
+              <strong>Tema</strong>
+              <small>Color de la interfaz</small>
+            </div>
+            <select id="theme-select">
+              <option value="void">Void (oscuro)</option>
+              <option value="neon">Neon</option>
+              <option value="midnight">Midnight</option>
+              <option value="light">Claro</option>
+            </select>
+          </div>
+          <div class="setting-row">
+            <div>
+              <strong>Idioma</strong>
+              <small>Cambia el idioma de la página</small>
+            </div>
+            <select id="lang-select">
+              <option value="es">Español</option>
+              <option value="en">English</option>
+            </select>
+          </div>
+          <div class="setting-row">
+            <div>
+              <strong>Cuenta</strong>
+              <small>Modo actual</small>
+            </div>
+            <button class="btn-sm ghost" id="btn-logout">Modo local</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Bottom navigation -->
+    <nav class="bottom-nav" id="bottom-nav">
+      <button class="nav-item active" data-panel="home">
+        <span class="ico">⌂</span>
+        <span>Inicio</span>
+      </button>
+      <button class="nav-item" data-panel="scripts">
+        <span class="ico">▤</span>
+        <span>Scripts</span>
+      </button>
+      <button class="nav-item upload-btn" data-panel="upload">
+        <span class="ico">＋</span>
+        <span>Subir</span>
+      </button>
+      <button class="nav-item" data-panel="community">
+        <span class="ico">◎</span>
+        <span>Comunidad</span>
+      </button>
+      <button class="nav-item" data-panel="support">
+        <span class="ico">💬</span>
+        <span>Soporte</span>
+      </button>
+      <button class="nav-item" data-panel="settings">
+        <span class="ico">⚙</span>
+        <span>Ajustes</span>
+      </button>
+    </nav>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
