@@ -147,8 +147,8 @@
   function updateAccountUI() {
     const button = $("#btn-account");
     if (button) button.textContent = currentUser ? getLocalName() : "Crear cuenta / Entrar";
-    const logout = $("#btn-logout");
-    if (logout) logout.textContent = currentUser ? "Cerrar sesión" : "Iniciar sesión";
+    const status = $("#account-status");
+    if (status) status.textContent = currentUser ? "Sesión iniciada como " + getLocalName() : "No has iniciado sesión";
   }
   function authModal(initialTab = "register") {
     if (!supabaseClient) return notice("No se pudo conectar con el servicio de cuentas. Revisa la configuración de Supabase.");
@@ -156,7 +156,7 @@
       '<div class="auth-tabs"><button type="button" class="btn-sm" data-auth-tab="register">Crear cuenta</button><button type="button" class="btn-sm" data-auth-tab="login">Iniciar sesión</button></div>' +
       '<form id="register-form" class="auth-form"><label>Nombre de usuario<input id="register-name" type="text" minlength="3" maxlength="24" autocomplete="username" placeholder="Tu nombre" required pattern="[A-Za-z0-9_.-]+"></label>' +
       '<label>Contraseña<input id="register-password" type="password" minlength="8" autocomplete="new-password" placeholder="Mínimo 8 caracteres" required></label>' +
-      '<label>Repite la contraseña<input id="register-confirm" type="password" minlength="8" autocomplete="new-password" placeholder="Escribe la misma contraseña" required></label><button class="btn-primary" type="submit">Crear mi cuenta</button></form>' +
+      '<button class="btn-primary" type="submit">Crear mi cuenta</button></form>' +
       '<form id="login-form" class="auth-form" hidden><label>Nombre de usuario<input id="login-name" type="text" maxlength="24" autocomplete="username" placeholder="Tu nombre de usuario" required></label>' +
       '<label>Contraseña<input id="login-password" type="password" autocomplete="current-password" placeholder="Tu contraseña" required></label><button class="btn-primary" type="submit">Entrar</button></form>' +
       '<p id="auth-message" class="note" role="status" aria-live="polite"></p>';
@@ -170,10 +170,9 @@
     modal.querySelectorAll("[data-auth-tab]").forEach(b => b.addEventListener("click", () => setTab(b.dataset.authTab)));
     registerForm.addEventListener("submit", async event => {
       event.preventDefault();
-      const name = $("#register-name", modal).value.trim(), password = $("#register-password", modal).value, confirm = $("#register-confirm", modal).value;
+      const name = $("#register-name", modal).value.trim(), password = $("#register-password", modal).value;
       if (!/^[A-Za-z0-9_.-]{3,24}$/.test(name)) { message.textContent = "El nombre debe tener 3–24 caracteres: letras, números, punto, guion o guion bajo."; return; }
       if (password.length < 8) { message.textContent = "La contraseña debe tener al menos 8 caracteres."; return; }
-      if (password !== confirm) { message.textContent = "Las contraseñas no coinciden."; return; }
       const submit = registerForm.querySelector('button[type="submit"]');
       submit.disabled = true; submit.textContent = "Creando cuenta…";
       try {
@@ -212,7 +211,6 @@
     const modal = openModal("Tu cuenta", markup);
     $("#account-signout", modal).addEventListener("click", async () => { modal.remove(); await signOut(); });
   });
-  $("#btn-logout")?.addEventListener("click", signOut);
   if (supabaseClient) {
     supabaseClient.auth.onAuthStateChange((_event, session) => {
       currentUser = session?.user || null;
