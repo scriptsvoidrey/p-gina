@@ -47,3 +47,24 @@ create policy "Users delete own VOID media" on storage.objects
 
 -- Nota: la lectura de posts y archivos es pública por diseño.
 -- Nunca pongas la service_role key en el navegador.
+
+-- Biblioteca de scripts públicos: cualquier visitante autenticado puede leer;
+-- cada autor solo puede crear y borrar sus propios scripts.
+create table if not exists public.scripts (
+  id uuid primary key default gen_random_uuid(),
+  author_id uuid not null references auth.users(id) on delete cascade,
+  author_name text not null default 'Usuario VOID',
+  title text not null check (char_length(title) between 1 and 80),
+  description text not null default '' check (char_length(description) <= 400),
+  code text not null check (char_length(code) between 1 and 100000),
+  created_at timestamptz not null default now()
+);
+alter table public.scripts enable row level security;
+drop policy if exists "Public can read scripts" on public.scripts;
+create policy "Public can read scripts" on public.scripts for select using (true);
+drop policy if exists "Authenticated users publish scripts" on public.scripts;
+create policy "Authenticated users publish scripts" on public.scripts
+  for insert to authenticated with check (auth.uid() = author_id);
+drop policy if exists "Authors delete own scripts" on public.scripts;
+create policy "Authors delete own scripts" on public.scripts
+  for delete to authenticated using (auth.uid() = author_id);
