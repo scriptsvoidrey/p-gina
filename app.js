@@ -82,7 +82,7 @@
     return modal;
   }
 
-  // Cuenta: acceso por contraseña y confirmación por enlace enviado al correo.
+  // Cuenta: acceso por contraseña; el alta debe crear sesión sin confirmación por correo.
   function accountModal(initialMode = "login") {
     if (!client) {
       openModal("Conectar VOID Hub", '<p>La autenticación necesita las credenciales del proyecto Supabase.</p>');
@@ -145,16 +145,13 @@
           ? await client.auth.signUp({
               email, password: pass,
               options: {
-                data: { display_name: name },
-                emailRedirectTo: window.location.origin
+                data: { display_name: name }
               }
             })
           : await client.auth.signInWithPassword({ email, password: pass });
         if (result.error) throw result.error;
         if (mode === "signup" && !result.data.session) {
-          feedback.textContent = "¡Cuenta creada! Revisa tu correo y pulsa el enlace de Confirmar para activar tu cuenta. También revisa Spam.";
-          submit.textContent = "Correo de confirmación enviado";
-          submit.disabled = true;
+          feedback.textContent = "Supabase todavía exige confirmar el correo. Para crear la cuenta al instante, desactiva Confirm email en Authentication → Sign In / Providers → Email.";
           return;
         }
         if (result.data.session) {
