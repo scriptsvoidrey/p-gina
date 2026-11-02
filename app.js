@@ -82,51 +82,70 @@
     return modal;
   }
 
-  // Cuenta: un solo formulario con cambio claro entre entrar y registrarse
+  // Cuenta: selector entre iniciar sesión y crear cuenta, con campos separados.
   function accountModal(initialMode = "login") {
     if (!client) {
       openModal("Conectar VOID Hub", '<p>La autenticación necesita las credenciales del proyecto Supabase.</p>');
       return;
     }
     const modal = openModal("Iniciar sesión", `
+      <div class="auth-tabs" role="tablist" aria-label="Acceso a la cuenta">
+        <button type="button" class="auth-tab" data-mode="login" role="tab">Iniciar sesión</button>
+        <button type="button" class="auth-tab" data-mode="signup" role="tab">Crear cuenta</button>
+      </div>
       <form id="auth-form" class="auth-form">
+        <label id="auth-name-wrap" hidden>Nombre<input type="text" id="auth-name" maxlength="32" autocomplete="name" placeholder="Tu nombre"></label>
         <label>Correo electrónico<input type="email" id="auth-email" autocomplete="email" required placeholder="tu@correo.com"></label>
-        <label>Contraseña<input type="password" id="auth-password" minlength="6" autocomplete="current-password" required placeholder="Mínimo 6 caracteres"></label>
-        <label id="auth-name-wrap" hidden>Nombre público<input type="text" id="auth-name" maxlength="32" placeholder="Cómo te verá la comunidad"></label>
-        <button class="btn-primary" id="auth-submit" type="submit">Iniciar sesión</button>
+        <label>Contraseña<input type="password" id="auth-password" minlength="6" autocomplete="current-password" required placeholder="Tu contraseña"></label>
+        <label id="auth-confirm-wrap" hidden>Repetir contraseña<input type="password" id="auth-confirm" minlength="6" autocomplete="new-password" placeholder="Repite tu contraseña"></label>
+        <button class="btn-primary" id="auth-submit" type="submit">Entrar a mi cuenta</button>
         <p class="note" id="auth-feedback" role="status" aria-live="polite"></p>
-        <button class="auth-switch" id="auth-switch" type="button">¿No tienes cuenta? Crear cuenta</button>
       </form>`);
     let mode = initialMode;
     const form = $("#auth-form", modal);
     const nameWrap = $("#auth-name-wrap", modal);
+    const confirmWrap = $("#auth-confirm-wrap", modal);
     const submit = $("#auth-submit", modal);
-    const switchButton = $("#auth-switch", modal);
     const heading = $("#void-modal-title", modal);
+    const password = $("#auth-password", modal);
+    const confirm = $("#auth-confirm", modal);
+    const tabs = $$(".auth-tab", modal);
     function setMode(nextMode) {
       mode = nextMode;
       const signup = mode === "signup";
       if (heading) heading.textContent = signup ? "Crear cuenta" : "Iniciar sesión";
       nameWrap.hidden = !signup;
-      submit.textContent = signup ? "Crear cuenta" : "Entrar a mi cuenta";
-      $("#auth-password", modal).autocomplete = signup ? "new-password" : "current-password";
-      switchButton.textContent = signup ? "¿Ya tienes cuenta? Iniciar sesión" : "¿No tienes cuenta? Crear cuenta";
+      confirmWrap.hidden = !signup;
+      $("#auth-name", modal).required = signup;
+      confirm.required = signup;
+      submit.textContent = signup ? "Crear mi cuenta" : "Iniciar sesión";
+      password.autocomplete = signup ? "new-password" : "current-password";
+      tabs.forEach(tab => {
+        const active = tab.dataset.mode === mode;
+        tab.classList.toggle("active", active);
+        tab.setAttribute("aria-selected", String(active));
+      });
       $("#auth-feedback", modal).textContent = "";
     }
-    switchButton.addEventListener("click", () => setMode(mode === "login" ? "signup" : "login"));
+    tabs.forEach(tab => tab.addEventListener("click", () => setMode(tab.dataset.mode)));
     form.addEventListener("submit", async e => {
       e.preventDefault();
       if (!form.reportValidity()) return;
-      submit.disabled = true;
-      submit.textContent = mode === "signup" ? "Creando cuenta…" : "Iniciando sesión…";
       const email = $("#auth-email", modal).value.trim();
-      const password = $("#auth-password", modal).value;
+      const pass = password.value;
       const name = $("#auth-name", modal).value.trim();
       const feedback = $("#auth-feedback", modal);
+      if (mode === "signup" && pass !== confirm.value) {
+        feedback.textContent = "Las contraseñas no coinciden. Vuelve a escribirlas.";
+        confirm.focus();
+        return;
+      }
+      submit.disabled = true;
+      submit.textContent = mode === "signup" ? "Creando cuenta…" : "Iniciando sesión…";
       try {
         const result = mode === "signup"
-          ? await client.auth.signUp({ email, password, options: { data: { display_name: name || email.split("@")[0] } } })
-          : await client.auth.signInWithPassword({ email, password });
+          ? await client.auth.signUp({ email, password: pass, options: { data: { display_name: name } } })
+          : await client.auth.signInWithPassword({ email, password: pass });
         if (result.error) throw result.error;
         if (mode === "signup" && !result.data.session) {
           feedback.textContent = "Cuenta creada. Revisa tu correo para confirmar la dirección y luego inicia sesión.";
@@ -143,7 +162,7 @@
         feedback.textContent = err.message || "No se pudo completar la operación.";
       } finally {
         submit.disabled = false;
-        submit.textContent = mode === "signup" ? "Crear cuenta" : "Entrar a mi cuenta";
+        submit.textContent = mode === "signup" ? "Crear mi cuenta" : "Iniciar sesión";
       }
     });
     setMode(initialMode);
