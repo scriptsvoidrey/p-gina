@@ -78,7 +78,16 @@
             <button type="submit" class="btn-primary" id="btn-script-upload">Publicar</button>
           </form>
         </section>
-        <form class="upload-form" id="upload-form">
+        <section class="card script-publish">
+          <h3>Publicar un script</h3>
+          <form id="script-upload-form" class="upload-form compact-form">
+            <label>Nombre del script<input type="text" id="script-title" maxlength="80" placeholder="Ej: Mi script de utilidad" required></label>
+            <label>Descripción<textarea id="script-description" maxlength="400" rows="2" placeholder="Qué hace este script..."></textarea></label>
+            <label>Código del script<textarea id="script-code" class="code-input" rows="9" spellcheck="false" placeholder="Pega aquí tu código..." required></textarea></label>
+            <button type="submit" class="btn-primary" id="btn-script-upload">Publicar</button>
+          </form>
+        </section>
+                <form class="upload-form" id="upload-form">
           <div class="media-kind" role="group" aria-label="Tipo de publicación">
             <button type="button" class="media-kind-btn active" data-media-kind="image" aria-pressed="true">📷 Fotos</button>
             <button type="button" class="media-kind-btn" data-media-kind="video" aria-pressed="false">▶ Videos</button>
