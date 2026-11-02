@@ -69,31 +69,6 @@
         <h2 class="section-title">Publicar en VOID</h2>
         <p class="hint">Comparte fotos, videos y scripts con la comunidad desde aquí.</p>
 
-        <form class="upload-form" id="upload-form">
-          <div class="media-kind" role="group" aria-label="Tipo de publicación">
-            <button type="button" class="media-kind-btn active" data-media-kind="image" aria-pressed="true">📷 Fotos</button>
-            <button type="button" class="media-kind-btn" data-media-kind="video" aria-pressed="false">▶ Videos</button>
-          </div>
-          <label>
-            Título
-            <input type="text" id="up-title" placeholder="Ej: Mi mejor clip de ranked" required maxlength="80" />
-          </label>
-          <label>
-            Comentario
-            <textarea id="up-comment" placeholder="Cuéntanos algo sobre el video o foto..." rows="3" maxlength="400"></textarea>
-          </label>
-          <label class="file-zone" id="file-zone">
-            <input type="file" id="up-file" accept="image/*" />
-            <div class="zone-inner">
-              <span class="zone-icon">📤</span>
-              <strong id="file-zone-title">Selecciona o arrastra tus fotos</strong>
-              <small id="file-zone-help">JPG, PNG y otros formatos de imagen</small>
-            </div>
-          </label>
-          <div class="preview" id="preview" hidden></div>
-          <button type="submit" class="btn-primary" id="btn-upload">Publicar</button>
-        </form>
-
         <section class="card script-publish">
           <h3>Publicar un script</h3>
           <form id="script-upload-form" class="upload-form compact-form">
