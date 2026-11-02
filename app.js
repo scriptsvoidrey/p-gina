@@ -19,7 +19,8 @@
     panels.forEach(p => p.classList.toggle("active", p.id === `panel-${id}`));
     navItems.forEach(n => n.classList.toggle("active", n.dataset.panel === id));
     window.scrollTo({ top: 0, behavior: "smooth" });
-    if (id === "upload") loadFeed();\n    if (id === "scripts") loadScripts();
+    if (id === "upload") loadFeed();
+    if (id === "scripts") loadScripts();
   }
   navItems.forEach(btn => btn.addEventListener("click", () => showPanel(btn.dataset.panel)));
 
