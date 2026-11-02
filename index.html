@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0e17" />
+  <title>VOID · Scripts Hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <!-- Top bar -->
+    <header class="topbar">
+      <div class="brand">
+        <span class="logo-mark">V</span>
+        <div>
+          <strong>VOID HUB</strong>
+          <small>scripts · community</small>
+        </div>
+      </div>
+      <button class="pill" id="btn-account">Crear cuenta</button>
+    </header>
+
+    <!-- Main content area -->
+    <main class="content" id="main">
+      <!-- HOME -->
+      <section class="panel active" id="panel-home">
+        <div class="hero">
+          <h1>Bienvenido a <span>VOID</span></h1>
+          <p>Hub de scripts, comunidad y herramientas. Diseño limpio, sin ruido.</p>
+        </div>
+
+        <div class="stats">
+          <div class="stat">
+            <span class="num" id="stat-scripts">5</span>
+            <span class="lbl">Scripts</span>
+          </div>
+          <div class="stat">
+            <span class="num" id="stat-runs">369.1K</span>
+            <span class="lbl">Ejecuciones</span>
+          </div>
+          <div class="stat">
+            <span class="num" id="stat-members">4,112</span>
+            <span class="lbl">Miembros</span>
+          </div>
+        </div>
+
+        <article class="card about">
+          <h2>Sobre el creador</h2>
+          <p><strong>Nexvyr</strong> — Creador</p>
+          <p>Las actualizaciones de otros scripts son cuando algo realmente falle y decida arreglarlo.</p>
+          <p>El script de <strong>Duelos</strong> será el que más tendrá actualizaciones <strong>SEMANALES</strong>, después de cada actualización de Murder vs Sheriffs [DUELS].</p>
+          <p>Dispositivos de gama baja tendrán un potenciador de rendimiento para una mejor experiencia.</p>
+          <p class="thanks">Disfruten la experiencia y gracias por usar el hub.</p>
+        </article>
+      </section>
+
+      <!-- SCRIPTS -->
+      <section class="panel" id="panel-scripts">
+        <h2 class="section-title">Scripts disponibles</h2>
+        <div class="script-grid" id="script-list">
+          <div class="script-card">
+            <div class="script-icon">⚔️</div>
+            <h3>Duelos</h3>
+            <p>Actualizaciones semanales · Murder vs Sheriffs</p>
+            <button class="btn-sm">Abrir</button>
+          </div>
+          <div class="script-card">
+            <div class="script-icon">🔥</div>
+            <h3>Blood Strike</h3>
+            <p>Ranked · Salas · Boost rendimiento</p>
+            <button class="btn-sm">Abrir</button>
+          </div>
+          <div class="script-card">
+            <div class="script-icon">🎯</div>
+            <h3>Aim Assist</h3>
+            <p>Configuración ligera</p>
+            <button class="btn-sm">Abrir</button>
+          </div>
+          <div class="script-card">
+            <div class="script-icon">⚡</div>
+            <h3>Performance+</h3>
+            <p>Para dispositivos bajos</p>
+            <button class="btn-sm">Abrir</button>
+          </div>
+          <div class="script-card">
+            <div class="script-icon">📦</div>
+            <h3>Pack Extra</h3>
+            <p>Utilidades varias</p>
+            <button class="btn-sm">Abrir</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- UPLOAD / COMMUNITY FEED -->
+      <section class="panel" id="panel-upload">
+        <h2 class="section-title">Subir contenido</h2>
+        <p class="hint">Todo lo que subas aquí es público para toda la comunidad.</p>
+
+        <form class="upload-form" id="upload-form">
+          <label>
+            Título
+            <input type="text" id="up-title" placeholder="Ej: Mi mejor clip de ranked" required maxlength="80" />
+          </label>
+          <label>
+            Comentario
+            <textarea id="up-comment" placeholder="Cuéntanos algo sobre el video o foto..." rows="3" maxlength="400"></textarea>
+          </label>
+          <label class="file-zone" id="file-zone">
+            <input type="file" id="up-file" accept="image/*,video/*" />
+            <div class="zone-inner">
+              <span class="zone-icon">📤</span>
+              <strong>Toca o arrastra foto / video</strong>
+              <small>JPG, PNG, MP4, WEBM…</small>
+            </div>
+          </label>
+          <div class="preview" id="preview" hidden></div>
+          <button type="submit" class="btn-primary" id="btn-upload">Publicar para todos</button>
+        </form>
+
+        <h3 class="feed-title">Feed público</h3>
+        <div class="feed" id="feed">
+          <!-- posts rendered by JS -->
+        </div>
+      </section>
+
+      <!-- COMMUNITY -->
+      <section class="panel" id="panel-community">
+        <h2 class="section-title">Comunidad</h2>
+        <div class="card discord">
+          <h3>Discord</h3>
+          <p>Únete a la comunidad, comparte clips y recibe anuncios.</p>
+          <a class="btn-primary" href="https://discord.com" target="_blank" rel="noopener">Unirme al Discord</a>
+        </div>
+      </section>
+
+      <!-- SUPPORT -->
+      <section class="panel" id="panel-support">
+        <h2 class="section-title">Soporte</h2>
+        <div class="card support-box">
+          <div class="status">
+            <span class="dot offline"></span>
+            <span>Sin conexión · Conéctate al soporte</span>
+          </div>
+          <textarea id="support-msg" placeholder="Escribe tu mensaje (0/500)" maxlength="500" rows="4"></textarea>
+          <button class="btn-primary" id="btn-send-support">Enviar mensaje</button>
+          <p class="note">Aún no tienes cuenta. Crea una gratis para usar el soporte.</p>
+        </div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section class="panel" id="panel-settings">
+        <h2 class="section-title">Ajustes</h2>
+        <div class="card settings">
+          <div class="setting-row">
+            <div>
+              <strong>Tema</strong>
+              <small>Color de la interfaz</small>
+            </div>
+            <select id="theme-select">
+              <option value="void">Void (oscuro)</option>
+              <option value="neon">Neon</option>
+              <option value="midnight">Midnight</option>
+              <option value="light">Claro</option>
+            </select>
+          </div>
+          <div class="setting-row">
+            <div>
+              <strong>Idioma</strong>
+              <small>Cambia el idioma de la página</small>
+            </div>
+            <select id="lang-select">
+              <option value="es">Español</option>
+              <option value="en">English</option>
+            </select>
+          </div>
+          <div class="setting-row">
+            <div>
+              <strong>Cuenta</strong>
+              <small>Sesión actual</small>
+            </div>
+            <button class="btn-sm ghost" id="btn-logout">Sesión cerrada</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Bottom navigation (repeated / fixed) -->
+    <nav class="bottom-nav" id="bottom-nav">
+      <button class="nav-item active" data-panel="home">
+        <span class="ico">⌂</span>
+        <span>Inicio</span>
+      </button>
+      <button class="nav-item" data-panel="scripts">
+        <span class="ico">▤</span>
+        <span>Scripts</span>
+      </button>
+      <button class="nav-item upload-btn" data-panel="upload">
+        <span class="ico">＋</span>
+        <span>Subir</span>
+      </button>
+      <button class="nav-item" data-panel="community">
+        <span class="ico">◎</span>
+        <span>Comunidad</span>
+      </button>
+      <button class="nav-item" data-panel="support">
+        <span class="ico">💬</span>
+        <span>Soporte</span>
+      </button>
+      <button class="nav-item" data-panel="settings">
+        <span class="ico">⚙</span>
+        <span>Ajustes</span>
+      </button>
+    </nav>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
