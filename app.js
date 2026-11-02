@@ -168,6 +168,8 @@
   fileZone?.addEventListener("drop", e => handleFile(e.dataTransfer.files?.[0]));
 
   function renderPosts(posts) {
+    const postCount = $("#stat-members");
+    if (postCount) postCount.textContent = String(posts.length);
     if (!posts.length) { feed.innerHTML = '<div class="empty-feed">Todavía no hay publicaciones.<br>¡Comparte la primera!</div>'; return; }
     feed.innerHTML = posts.map(p => {
       const media = p.media_type === "video"
