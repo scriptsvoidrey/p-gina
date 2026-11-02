@@ -19,7 +19,7 @@
     panels.forEach(p => p.classList.toggle("active", p.id === `panel-${id}`));
     navItems.forEach(n => n.classList.toggle("active", n.dataset.panel === id));
     window.scrollTo({ top: 0, behavior: "smooth" });
-    if (id === "upload") loadFeed();
+    if (id === "upload") loadFeed();\n    if (id === "scripts") loadScripts();
   }
   navItems.forEach(btn => btn.addEventListener("click", () => showPanel(btn.dataset.panel)));
 
@@ -101,7 +101,7 @@
         $("#auth-feedback", modal).textContent = mode === "signup"
           ? "Cuenta creada. Revisa tu correo si la confirmación está activada."
           : "Sesión iniciada correctamente.";
-        if (result.data.session) { currentUser = result.data.user; updateAccountUI(); setTimeout(() => modal.remove(), 700); }
+        if (result.data.session) { currentUser = result.data.user; updateAccountUI(); loadScripts(); setTimeout(() => modal.remove(), 700); }
       } catch (err) {
         $("#auth-feedback", modal).textContent = err.message || "No se pudo completar la operación.";
       } finally { submit.disabled = false; }
@@ -123,21 +123,57 @@
     currentUser = null; updateAccountUI(); notice("Sesión cerrada.");
   });
 
-  // Scripts: cada botón abre una ficha real. Añade la URL oficial cuando exista.
-  const scriptInfo = {
-    "Duelos": "Información y recursos relacionados con Duelos. El enlace de descarga se publicará cuando esté disponible.",
-    "Blood Strike": "Recursos de la comunidad para Blood Strike. Verifica siempre los archivos antes de ejecutarlos.",
-    "Aim Assist": "Ficha del recurso Aim Assist. No hay un enlace de descarga configurado todavía.",
-    "Performance+": "Herramientas de rendimiento. No hay un enlace de descarga configurado todavía.",
-    "Pack Extra": "Paquete de utilidades. No hay un enlace de descarga configurado todavía."
-  };
-  $$(".script-card").forEach(card => {
-    const button = $(".btn-sm", card);
-    const title = $("h3", card)?.textContent.trim() || "Recurso";
-    if (button) button.addEventListener("click", () => {
-      const description = scriptInfo[title] || "Información del recurso.";
-      openModal(title, `<p>${escapeHtml(description)}</p><p class="note">Este recurso todavía no tiene un enlace público asociado.</p>`);
-    });
+  // Biblioteca pública de scripts: abrir, copiar y borrar los propios.
+  const scriptList = $("#script-list");
+  const scriptForm = $("#script-upload-form");
+  function renderScripts(items) {
+    const count = $("#stat-scripts");
+    if (count) count.textContent = String(items.length);
+    if (!items.length) { scriptList.innerHTML = '<div class="empty-feed">Todavía no hay scripts. Publica el primero desde Subir.</div>'; return; }
+    scriptList.innerHTML = items.map(s => `<article class="script-card">
+      <div class="script-icon">⌘</div><div class="script-info"><h3>${escapeHtml(s.title)}</h3><p>${escapeHtml(s.description || "Script de la comunidad")}</p><small>${escapeHtml(s.author_name || "Usuario VOID")}</small></div>
+      <button class="btn-sm" type="button" data-open-script="${s.id}">Abrir</button>
+      ${currentUser?.id === s.author_id ? `<button class="btn-sm danger-btn" type="button" data-delete-script="${s.id}">Eliminar</button>` : ""}
+    </article>`).join("");
+    scriptList.querySelectorAll("[data-open-script]").forEach(b => b.addEventListener("click", () => {
+      const s = items.find(x => x.id === b.dataset.openScript);
+      if (!s) return;
+      const modal = openModal(s.title, `<p>${escapeHtml(s.description || "")}</p><pre class="script-code-view"><code>${escapeHtml(s.code)}</code></pre><p class="note">Publicado por ${escapeHtml(s.author_name || "Usuario VOID")}</p>`);
+      const copy = document.createElement("button"); copy.className = "btn-primary"; copy.textContent = "Copiar código";
+      copy.addEventListener("click", async () => {
+        try { await navigator.clipboard.writeText(s.code); copy.textContent = "¡Código copiado!"; }
+        catch { const area=document.createElement("textarea"); area.value=s.code; modal.append(area); area.select(); document.execCommand("copy"); area.remove(); copy.textContent="¡Código copiado!"; }
+      });
+      $(".void-modal-body", modal).append(copy);
+    }));
+    scriptList.querySelectorAll("[data-delete-script]").forEach(b => b.addEventListener("click", async () => {
+      if (!currentUser || !confirm("¿Eliminar este script? Esta acción no se puede deshacer.")) return;
+      const { error } = await client.from("scripts").delete().eq("id", b.dataset.deleteScript).eq("author_id", currentUser.id);
+      if (error) return notice("No se pudo eliminar: " + error.message);
+      await loadScripts();
+    }));
+  }
+  async function loadScripts() {
+    if (!scriptList) return;
+    if (!client) { scriptList.innerHTML='<div class="empty-feed">Conecta Supabase para activar la biblioteca.</div>'; return; }
+    scriptList.innerHTML='<div class="empty-feed">Cargando scripts…</div>';
+    const { data, error } = await client.from("scripts").select("id,author_id,author_name,title,description,code,created_at").order("created_at",{ascending:false}).limit(100);
+    if (error) { scriptList.innerHTML='<div class="empty-feed">No se pudieron cargar los scripts.</div>'; console.error(error); return; }
+    renderScripts(data || []);
+  }
+  scriptForm?.addEventListener("submit", async e => {
+    e.preventDefault();
+    if (!client) return notice("Primero configura Supabase.");
+    if (!currentUser) { accountModal(); return notice("Inicia sesión para publicar un script."); }
+    const title=$("#script-title").value.trim(), description=$("#script-description").value.trim(), code=$("#script-code").value.trim();
+    if (!title || !code) return notice("Escribe el nombre y el código del script.");
+    const button=$("#btn-script-upload"); button.disabled=true; button.textContent="Publicando…";
+    try {
+      const { error } = await client.from("scripts").insert({author_id:currentUser.id,author_name:currentUser.user_metadata?.display_name || currentUser.email.split("@")[0],title,description,code});
+      if (error) throw error;
+      scriptForm.reset(); await loadScripts(); notice("Script publicado en la sección Scripts.");
+    } catch(err) { notice(err.message || "No se pudo publicar el script."); }
+    finally { button.disabled=false; button.textContent="Publicar en Scripts"; }
   });
 
   // Subida y feed público mediante Supabase Storage + Postgres
@@ -175,17 +211,26 @@
       const media = p.media_type === "video"
         ? `<video src="${escapeHtml(p.media_url)}" controls playsinline preload="metadata"></video>`
         : `<img src="${escapeHtml(p.media_url)}" alt="${escapeHtml(p.title)}" loading="lazy">`;
+      const own = currentUser?.id === p.author_id;
       return `<article class="post"><div class="post-media">${media}</div><div class="post-body">
         <h4>${escapeHtml(p.title)}</h4>${p.comment ? `<p>${escapeHtml(p.comment)}</p>` : ""}
-        <div class="post-meta">${escapeHtml(p.author_name || "Usuario VOID")} · ${escapeHtml(formatDate(p.created_at))}</div>
+        <div class="post-meta">${escapeHtml(p.author_name || "Usuario VOID")} · ${escapeHtml(formatDate(p.created_at))}</div>${own ? `<button class="btn-sm danger-btn" type="button" data-delete-post="${p.id}">Eliminar publicación</button>` : ""}
       </div></article>`;
     }).join("");
+    feed.querySelectorAll("[data-delete-post]").forEach(b => b.addEventListener("click", async () => {
+      if (!currentUser || !confirm("¿Eliminar tu publicación y su archivo?")) return;
+      const post=posts.find(p=>p.id===b.dataset.deletePost);
+      const {error}=await client.from("posts").delete().eq("id",post.id).eq("author_id",currentUser.id);
+      if(error) return notice("No se pudo eliminar: "+error.message);
+      if(post.media_path) { const removed=await client.storage.from("void-media").remove([post.media_path]); if(removed.error) console.warn("No se pudo borrar el archivo",removed.error); }
+      await loadFeed();
+    }));
   }
   async function loadFeed() {
     if (!feed) return;
     if (!client) { feed.innerHTML = '<div class="empty-feed">Conecta Supabase para activar el feed público.</div>'; return; }
     feed.innerHTML = '<div class="empty-feed">Cargando publicaciones…</div>';
-    const { data, error } = await client.from("posts").select("id,title,comment,media_url,media_type,author_name,created_at").order("created_at", { ascending:false }).limit(50);
+    const { data, error } = await client.from("posts").select("id,author_id,title,comment,media_url,media_path,media_type,author_name,created_at").order("created_at", { ascending:false }).limit(50);
     if (error) { feed.innerHTML = '<div class="empty-feed">No se pudo cargar el feed. Revisa la configuración de Supabase.</div>'; console.error(error); return; }
     renderPosts(data || []);
   }
@@ -234,12 +279,12 @@
   async function init() {
     if (!client) {
       feed.innerHTML = '<div class="empty-feed">El feed público estará disponible cuando conectes Supabase.</div>';
-      updateAccountUI(); return;
+      updateAccountUI(); await loadScripts(); return;
     }
     const { data } = await client.auth.getSession();
     currentUser = data.session?.user || null;
-    client.auth.onAuthStateChange((_event, session) => { currentUser = session?.user || null; updateAccountUI(); });
-    updateAccountUI(); await loadFeed();
+    client.auth.onAuthStateChange((_event, session) => { currentUser = session?.user || null; updateAccountUI(); loadScripts(); });
+    updateAccountUI(); await Promise.all([loadFeed(), loadScripts()]);
   }
   init();
 })();
