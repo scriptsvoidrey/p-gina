@@ -82,52 +82,71 @@
     return modal;
   }
 
-  // Cuenta: registro e inicio de sesión Supabase Auth
-  function accountModal() {
+  // Cuenta: un solo formulario con cambio claro entre entrar y registrarse
+  function accountModal(initialMode = "login") {
     if (!client) {
-      openModal("Conectar VOID Hub", '<p>La autenticación necesita las credenciales de tu proyecto Supabase.</p><p>Configura <strong>supabase-config.js</strong> y ejecuta el SQL incluido en <strong>supabase-setup.sql</strong>.</p>');
+      openModal("Conectar VOID Hub", '<p>La autenticación necesita las credenciales del proyecto Supabase.</p>');
       return;
     }
-    const modal = openModal("Tu cuenta", `
-      <div class="auth-tabs"><button type="button" class="btn-sm" data-mode="login">Iniciar sesión</button><button type="button" class="btn-sm" data-mode="signup">Crear cuenta</button></div>
+    const modal = openModal("Iniciar sesión", `
       <form id="auth-form" class="auth-form">
         <label>Correo electrónico<input type="email" id="auth-email" autocomplete="email" required placeholder="tu@correo.com"></label>
         <label>Contraseña<input type="password" id="auth-password" minlength="6" autocomplete="current-password" required placeholder="Mínimo 6 caracteres"></label>
         <label id="auth-name-wrap" hidden>Nombre público<input type="text" id="auth-name" maxlength="32" placeholder="Cómo te verá la comunidad"></label>
         <button class="btn-primary" id="auth-submit" type="submit">Iniciar sesión</button>
-        <p class="note" id="auth-feedback" aria-live="polite"></p>
+        <p class="note" id="auth-feedback" role="status" aria-live="polite"></p>
+        <button class="auth-switch" id="auth-switch" type="button">¿No tienes cuenta? Crear cuenta</button>
       </form>`);
-    let mode = "login";
+    let mode = initialMode;
     const form = $("#auth-form", modal);
     const nameWrap = $("#auth-name-wrap", modal);
     const submit = $("#auth-submit", modal);
-    modal.querySelectorAll("[data-mode]").forEach(b => b.addEventListener("click", () => {
-      mode = b.dataset.mode;
-      nameWrap.hidden = mode !== "signup";
-      submit.textContent = mode === "signup" ? "Crear cuenta" : "Iniciar sesión";
-      $("#auth-password", modal).autocomplete = mode === "signup" ? "new-password" : "current-password";
+    const switchButton = $("#auth-switch", modal);
+    const heading = $("#void-modal-title", modal);
+    function setMode(nextMode) {
+      mode = nextMode;
+      const signup = mode === "signup";
+      if (heading) heading.textContent = signup ? "Crear cuenta" : "Iniciar sesión";
+      nameWrap.hidden = !signup;
+      submit.textContent = signup ? "Crear cuenta" : "Entrar a mi cuenta";
+      $("#auth-password", modal).autocomplete = signup ? "new-password" : "current-password";
+      switchButton.textContent = signup ? "¿Ya tienes cuenta? Iniciar sesión" : "¿No tienes cuenta? Crear cuenta";
       $("#auth-feedback", modal).textContent = "";
-    }));
+    }
+    switchButton.addEventListener("click", () => setMode(mode === "login" ? "signup" : "login"));
     form.addEventListener("submit", async e => {
       e.preventDefault();
+      if (!form.reportValidity()) return;
       submit.disabled = true;
+      submit.textContent = mode === "signup" ? "Creando cuenta…" : "Iniciando sesión…";
       const email = $("#auth-email", modal).value.trim();
       const password = $("#auth-password", modal).value;
       const name = $("#auth-name", modal).value.trim();
-      let result;
+      const feedback = $("#auth-feedback", modal);
       try {
-        result = mode === "signup"
-          ? await client.auth.signUp({ email, password, options:{ emailRedirectTo: window.location.origin + "/", data:{ display_name:name || email.split("@")[0] } } })
+        const result = mode === "signup"
+          ? await client.auth.signUp({ email, password, options: { data: { display_name: name || email.split("@")[0] } } })
           : await client.auth.signInWithPassword({ email, password });
         if (result.error) throw result.error;
-        $("#auth-feedback", modal).textContent = mode === "signup"
-          ? "Cuenta creada. Revisa tu correo si la confirmación está activada."
-          : "Sesión iniciada correctamente.";
-        if (result.data.session) { currentUser = result.data.user; updateAccountUI(); loadScripts(); setTimeout(() => modal.remove(), 700); }
+        if (mode === "signup" && !result.data.session) {
+          feedback.textContent = "Cuenta creada. Revisa tu correo para confirmar la dirección y luego inicia sesión.";
+          return;
+        }
+        if (result.data.session) {
+          currentUser = result.data.user;
+          updateAccountUI();
+          await loadScripts();
+          feedback.textContent = "¡Sesión iniciada correctamente!";
+          setTimeout(() => modal.remove(), 500);
+        }
       } catch (err) {
-        $("#auth-feedback", modal).textContent = err.message || "No se pudo completar la operación.";
-      } finally { submit.disabled = false; }
+        feedback.textContent = err.message || "No se pudo completar la operación.";
+      } finally {
+        submit.disabled = false;
+        submit.textContent = mode === "signup" ? "Crear cuenta" : "Entrar a mi cuenta";
+      }
     });
+    setMode(initialMode);
   }
   function updateAccountUI() {
     const button = $("#btn-account");
