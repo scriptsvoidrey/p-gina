@@ -82,7 +82,7 @@
     return modal;
   }
 
-  // Cuenta: selector entre iniciar sesión y crear cuenta, con campos separados.
+  // Cuenta: acceso por contraseña y confirmación de registro con código OTP por correo.
   function accountModal(initialMode = "login") {
     if (!client) {
       openModal("Conectar VOID Hub", '<p>La autenticación necesita las credenciales del proyecto Supabase.</p>');
@@ -96,28 +96,38 @@
       <form id="auth-form" class="auth-form">
         <label id="auth-name-wrap" hidden>Nombre<input type="text" id="auth-name" maxlength="32" autocomplete="name" placeholder="Tu nombre"></label>
         <label>Correo electrónico<input type="email" id="auth-email" autocomplete="email" required placeholder="tu@correo.com"></label>
-        <label>Contraseña<input type="password" id="auth-password" minlength="6" autocomplete="current-password" required placeholder="Tu contraseña"></label>
+        <label id="auth-password-wrap">Contraseña<input type="password" id="auth-password" minlength="6" autocomplete="current-password" required placeholder="Tu contraseña"></label>
         <label id="auth-confirm-wrap" hidden>Repetir contraseña<input type="password" id="auth-confirm" minlength="6" autocomplete="new-password" placeholder="Repite tu contraseña"></label>
+        <label id="auth-code-wrap" hidden>Código de 6 dígitos<input type="text" id="auth-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="000000"></label>
         <button class="btn-primary" id="auth-submit" type="submit">Entrar a mi cuenta</button>
+        <button class="btn-sm" id="auth-resend" type="button" hidden>Reenviar código</button>
         <p class="note" id="auth-feedback" role="status" aria-live="polite"></p>
       </form>`);
     let mode = initialMode;
+    let stage = "form";
     const form = $("#auth-form", modal);
     const nameWrap = $("#auth-name-wrap", modal);
     const confirmWrap = $("#auth-confirm-wrap", modal);
+    const passwordWrap = $("#auth-password-wrap", modal);
+    const codeWrap = $("#auth-code-wrap", modal);
+    const resend = $("#auth-resend", modal);
     const submit = $("#auth-submit", modal);
     const heading = $("#void-modal-title", modal);
     const password = $("#auth-password", modal);
     const confirm = $("#auth-confirm", modal);
+    const code = $("#auth-code", modal);
     const tabs = $$(".auth-tab", modal);
+    const feedback = $("#auth-feedback", modal);
+    const emailInput = $("#auth-email", modal);
     function setMode(nextMode) {
-      mode = nextMode;
+      mode = nextMode; stage = "form";
       const signup = mode === "signup";
-      if (heading) heading.textContent = signup ? "Crear cuenta" : "Iniciar sesión";
-      nameWrap.hidden = !signup;
-      confirmWrap.hidden = !signup;
-      $("#auth-name", modal).required = signup;
-      confirm.required = signup;
+      heading.textContent = signup ? "Crear cuenta" : "Iniciar sesión";
+      nameWrap.hidden = !signup; confirmWrap.hidden = !signup;
+      passwordWrap.hidden = false; codeWrap.hidden = true; resend.hidden = true;
+      $("#auth-name", modal).required = signup; confirm.required = signup;
+      code.required = false; password.required = true;
+      submit.hidden = false;
       submit.textContent = signup ? "Crear mi cuenta" : "Iniciar sesión";
       password.autocomplete = signup ? "new-password" : "current-password";
       tabs.forEach(tab => {
@@ -125,45 +135,76 @@
         tab.classList.toggle("active", active);
         tab.setAttribute("aria-selected", String(active));
       });
-      $("#auth-feedback", modal).textContent = "";
+      feedback.textContent = "";
+    }
+    function showCodeStage() {
+      stage = "verify";
+      heading.textContent = "Verifica tu correo";
+      tabs.forEach(tab => { tab.disabled = true; });
+      nameWrap.hidden = true; passwordWrap.hidden = true; confirmWrap.hidden = true;
+      codeWrap.hidden = false; resend.hidden = false;
+      password.required = false; confirm.required = false; code.required = true;
+      submit.textContent = "Verificar código";
+      feedback.textContent = "Te enviamos un código de 6 dígitos a " + emailInput.value.trim() + ". Revisa también Spam.";
+      code.focus();
     }
     tabs.forEach(tab => tab.addEventListener("click", () => setMode(tab.dataset.mode)));
     form.addEventListener("submit", async e => {
       e.preventDefault();
       if (!form.reportValidity()) return;
-      const email = $("#auth-email", modal).value.trim();
-      const pass = password.value;
-      const name = $("#auth-name", modal).value.trim();
-      const feedback = $("#auth-feedback", modal);
-      if (mode === "signup" && pass !== confirm.value) {
-        feedback.textContent = "Las contraseñas no coinciden. Vuelve a escribirlas.";
-        confirm.focus();
-        return;
-      }
+      const email = emailInput.value.trim();
+      const feedbackText = message => { feedback.textContent = message; };
       submit.disabled = true;
-      submit.textContent = mode === "signup" ? "Creando cuenta…" : "Iniciando sesión…";
       try {
+        if (stage === "verify") {
+          submit.textContent = "Verificando…";
+          const { data, error } = await client.auth.verifyOtp({ email, token: code.value.trim(), type: "signup" });
+          if (error) throw error;
+          if (data.session) {
+            currentUser = data.user; updateAccountUI(); await loadScripts();
+            feedbackText("¡Correo verificado y sesión iniciada!");
+            setTimeout(() => modal.remove(), 700);
+          } else {
+            feedbackText("Código confirmado. Ya puedes iniciar sesión.");
+            setTimeout(() => { modal.remove(); accountModal("login"); }, 900);
+          }
+          return;
+        }
+        const pass = password.value;
+        const name = $("#auth-name", modal).value.trim();
+        if (mode === "signup" && pass !== confirm.value) {
+          feedbackText("Las contraseñas no coinciden. Vuelve a escribirlas.");
+          confirm.focus(); return;
+        }
+        submit.textContent = mode === "signup" ? "Creando cuenta…" : "Iniciando sesión…";
         const result = mode === "signup"
           ? await client.auth.signUp({ email, password: pass, options: { data: { display_name: name } } })
           : await client.auth.signInWithPassword({ email, password: pass });
         if (result.error) throw result.error;
         if (mode === "signup" && !result.data.session) {
-          feedback.textContent = "Cuenta creada. Revisa tu correo para confirmar la dirección y luego inicia sesión.";
+          showCodeStage();
           return;
         }
         if (result.data.session) {
-          currentUser = result.data.user;
-          updateAccountUI();
-          await loadScripts();
-          feedback.textContent = "¡Sesión iniciada correctamente!";
+          currentUser = result.data.user; updateAccountUI(); await loadScripts();
+          feedbackText("¡Sesión iniciada correctamente!");
           setTimeout(() => modal.remove(), 500);
         }
       } catch (err) {
-        feedback.textContent = err.message || "No se pudo completar la operación.";
+        feedbackText(err.message || "No se pudo completar la operación.");
       } finally {
         submit.disabled = false;
-        submit.textContent = mode === "signup" ? "Crear mi cuenta" : "Iniciar sesión";
+        submit.textContent = stage === "verify" ? "Verificar código" : (mode === "signup" ? "Crear mi cuenta" : "Iniciar sesión");
       }
+    });
+    resend.addEventListener("click", async () => {
+      resend.disabled = true; resend.textContent = "Enviando…";
+      try {
+        const { error } = await client.auth.resend({ type: "signup", email: emailInput.value.trim() });
+        if (error) throw error;
+        feedback.textContent = "Te enviamos otro código. Revisa tu bandeja y Spam.";
+      } catch (err) { feedback.textContent = err.message || "No se pudo reenviar el código."; }
+      finally { resend.disabled = false; resend.textContent = "Reenviar código"; }
     });
     setMode(initialMode);
   }
