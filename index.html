@@ -78,8 +78,11 @@
             <button type="submit" class="btn-primary" id="btn-script-upload">Publicar</button>
           </form>
         </section>
-        <h3 class="feed-title">Compartir fotos</h3>
         <form class="upload-form" id="upload-form">
+          <div class="media-kind" role="group" aria-label="Tipo de publicación">
+            <button type="button" class="media-kind-btn active" data-media-kind="image" aria-pressed="true">📷 Fotos</button>
+            <button type="button" class="media-kind-btn" data-media-kind="video" aria-pressed="false">▶ Videos</button>
+          </div>
           <label>
             Título
             <input type="text" id="up-title" placeholder="Ej: Mi mejor clip de ranked" required maxlength="80" />
@@ -89,11 +92,11 @@
             <textarea id="up-comment" placeholder="Cuéntanos algo sobre el video o foto..." rows="3" maxlength="400"></textarea>
           </label>
           <label class="file-zone" id="file-zone">
-            <input type="file" id="up-file" accept="image/*,video/*" />
+            <input type="file" id="up-file" accept="image/*" />
             <div class="zone-inner">
               <span class="zone-icon">📤</span>
-              <strong>Arrastra tus fotos aquí</strong>
-              <small>Selecciona una imagen para ver la vista previa</small>
+              <strong id="file-zone-title">Selecciona o arrastra tus fotos</strong>
+              <small id="file-zone-help">JPG, PNG y otros formatos de imagen</small>
             </div>
           </label>
           <div class="preview" id="preview" hidden></div>
