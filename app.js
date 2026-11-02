@@ -211,7 +211,8 @@
   }
   function handleFile(file) {
     if (!file) return;
-    if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) return notice("Solo se permiten fotos o videos.");
+    if (selectedMediaKind === "image" && !file.type.startsWith("image/")) return notice("Selecciona una foto en la opción Fotos.");
+    if (selectedMediaKind === "video" && !file.type.startsWith("video/")) return notice("Selecciona un video en la opción Videos.");
     if (file.size > 50 * 1024 * 1024) return notice("El archivo supera el límite de 50 MB.");
     resetPreview(); currentFile = file; previewUrl = URL.createObjectURL(file);
     const media = document.createElement(file.type.startsWith("video/") ? "video" : "img");
@@ -220,6 +221,22 @@
     else media.alt = "Vista previa";
     preview.replaceChildren(media); preview.hidden = false;
   }
+  let selectedMediaKind = "image";
+  const mediaKindButtons = $(".media-kind-btn");
+  const zoneTitle = $("#file-zone-title");
+  const zoneHelp = $("#file-zone-help");
+  mediaKindButtons.forEach(button => button.addEventListener("click", () => {
+    selectedMediaKind = button.dataset.mediaKind;
+    mediaKindButtons.forEach(item => {
+      const active = item === button;
+      item.classList.toggle("active", active);
+      item.setAttribute("aria-pressed", String(active));
+    });
+    resetPreview();
+    if (fileInput) { fileInput.value = ""; fileInput.accept = selectedMediaKind === "video" ? "video/*" : "image/*"; }
+    if (zoneTitle) zoneTitle.textContent = selectedMediaKind === "video" ? "Selecciona o arrastra tus videos" : "Selecciona o arrastra tus fotos";
+    if (zoneHelp) zoneHelp.textContent = selectedMediaKind === "video" ? "MP4, WEBM y otros formatos de video" : "JPG, PNG y otros formatos de imagen";
+  }));
   fileInput?.addEventListener("change", () => handleFile(fileInput.files?.[0]));
   ["dragenter","dragover"].forEach(ev => fileZone?.addEventListener(ev, e => { e.preventDefault(); fileZone.classList.add("drag"); }));
   ["dragleave","drop"].forEach(ev => fileZone?.addEventListener(ev, e => { e.preventDefault(); fileZone.classList.remove("drag"); }));
