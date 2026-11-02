@@ -1,1 +1,406 @@
-PLACEHOLDER
+(() => {
+  "use strict";
+  const $ = (s, el = document) => el.querySelector(s);
+  const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+  const config = window.VOID_SUPABASE || {};
+  const configured = Boolean(config.url && config.anonKey &&
+    !config.url.includes("TU-PROYECTO") && !config.anonKey.includes("TU-CLAVE"));
+  const client = configured && window.supabase
+    ? window.supabase.createClient(config.url, config.anonKey)
+    : null;
+  let currentUser = null;
+  let currentFile = null;
+  let previewUrl = null;
+
+  // Navegación
+  const panels = $$(".panel");
+  const navItems = $$(".nav-item");
+  function showPanel(id) {
+    panels.forEach(p => p.classList.toggle("active", p.id === `panel-${id}`));
+    navItems.forEach(n => n.classList.toggle("active", n.dataset.panel === id));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    if (id === "upload") loadFeed();
+    if (id === "scripts") loadScripts();
+  }
+  navItems.forEach(btn => btn.addEventListener("click", () => showPanel(btn.dataset.panel)));
+
+  // Temas
+  const themeSelect = $("#theme-select");
+  const savedTheme = localStorage.getItem("void-theme") || "void";
+  document.documentElement.setAttribute("data-theme", savedTheme === "void" ? "" : savedTheme);
+  if (themeSelect) themeSelect.value = savedTheme;
+  themeSelect?.addEventListener("change", () => {
+    localStorage.setItem("void-theme", themeSelect.value);
+    document.documentElement.setAttribute("data-theme", themeSelect.value === "void" ? "" : themeSelect.value);
+  });
+
+  function notice(message, title = "VOID Hub") { showDialog(title, message, false); }
+  function askConfirm(message, title = "Confirmar acción") { return showDialog(title, message, true); }
+  function showDialog(title, message, confirmMode) {
+    return new Promise(resolve => {
+      $("#void-modal")?.remove();
+      const modal=document.createElement("div"); modal.id="void-modal"; modal.className="void-modal";
+      const backdrop=document.createElement("div"); backdrop.className="void-modal-backdrop";
+      const card=document.createElement("section"); card.className="void-modal-card"; card.setAttribute("role","dialog"); card.setAttribute("aria-modal","true");
+      const close=document.createElement("button"); close.className="void-modal-close"; close.type="button"; close.textContent="×"; close.setAttribute("aria-label","Cerrar");
+      const heading=document.createElement("h2"); heading.textContent=title;
+      const body=document.createElement("div"); body.className="void-modal-body";
+      const content=document.createElement("div"); content.className="notice-content";
+      const mark=document.createElement("span"); mark.className="notice-mark"+(confirmMode?" warning":""); mark.textContent=confirmMode?"!":"✓";
+      const p=document.createElement("p"); p.textContent=message; content.append(mark,p); body.append(content);
+      const actions=document.createElement("div"); actions.className="modal-actions";
+      const finish=value=>{modal.remove();resolve(value);};
+      close.addEventListener("click",()=>finish(false)); backdrop.addEventListener("click",()=>finish(false));
+      if(confirmMode){const cancel=document.createElement("button");cancel.className="btn-sm";cancel.textContent="Cancelar";cancel.addEventListener("click",()=>finish(false));actions.append(cancel);}
+      const ok=document.createElement("button");ok.className="btn-primary";ok.textContent=confirmMode?"Sí, continuar":"Entendido";ok.addEventListener("click",()=>finish(confirmMode));actions.append(ok);
+      card.append(close,heading,body,actions);modal.append(backdrop,card);document.body.append(modal);
+    });
+  }
+  function escapeHtml(value) {
+    return String(value ?? "").replace(/[&<>"']/g, c => ({
+      "&":"&","<":"<",">":">",'"':""","'":"&#39;"
+    }[c]));
+  }
+  function formatDate(value) {
+    return new Intl.DateTimeFormat("es", { dateStyle:"medium", timeStyle:"short" }).format(new Date(value));
+  }
+
+  // Ventana modal reutilizable
+  function openModal(title, body, footer = "") {
+    $("#void-modal")?.remove();
+    const modal = document.createElement("div");
+    modal.id = "void-modal";
+    modal.className = "void-modal";
+    modal.innerHTML = `<div class="void-modal-backdrop" data-close></div>
+      <section class="void-modal-card" role="dialog" aria-modal="true" aria-labelledby="void-modal-title">
+        <button class="void-modal-close" type="button" aria-label="Cerrar" data-close>×</button>
+        <h2 id="void-modal-title">${escapeHtml(title)}</h2>
+        <div class="void-modal-body">${body}</div>${footer}
+      </section>`;
+    document.body.append(modal);
+    modal.querySelectorAll("[data-close]").forEach(b => b.addEventListener("click", () => modal.remove()));
+    return modal;
+  }
+
+  function mapAuthError(err) {
+    const msg = (err && (err.message || err.msg || err.error_description)) || "No se pudo completar la operación.";
+    const code = (err && (err.code || err.error_code || err.status)) || "";
+    const lower = String(msg).toLowerCase();
+
+    // Mensajes claros en español + se conserva el error original de Supabase
+    if (code === "email_provider_disabled" || lower.includes("email logins are disabled") || lower.includes("email signups are disabled") || lower.includes("email provider")) {
+      return "El proveedor Email está desactivado en Supabase. Ve a Authentication → Providers → Email y actívalo (y “Allow new users to sign up”). Error original: " + msg;
+    }
+    if (code === "signup_disabled" || lower.includes("signups not allowed") || lower.includes("signups are disabled")) {
+      return "Los registros están deshabilitados en este proyecto. Activa “Allow new users to sign up” en Authentication → Providers → Email. Error original: " + msg;
+    }
+    if (lower.includes("invalid login credentials") || lower.includes("invalid credentials")) {
+      return "Correo o contraseña incorrectos. Error original: " + msg;
+    }
+    if (lower.includes("user already registered") || lower.includes("email already") || code === "email_exists") {
+      return "Ya existe una cuenta con este correo. Prueba a iniciar sesión. Error original: " + msg;
+    }
+    if (lower.includes("email not confirmed") || code === "email_not_confirmed") {
+      return "El correo aún no está confirmado. Revisa tu bandeja (o desactiva la confirmación en Supabase). Error original: " + msg;
+    }
+    if (lower.includes("password") && (lower.includes("least") || lower.includes("weak") || lower.includes("short"))) {
+      return "La contraseña no cumple los requisitos mínimos. Error original: " + msg;
+    }
+    // Por defecto: mostrar el mensaje real de Supabase (no lo ocultamos)
+    return msg;
+  }
+
+  // Cuenta: acceso y registro con Supabase Auth.
+  function accountModal(initialMode = "login") {
+    if (!client) {
+      openModal("Conectar VOID Hub", '<p>La autenticación necesita las credenciales del proyecto Supabase.</p>');
+      return;
+    }
+    const modal = openModal("Iniciar sesión", `
+      <div class="auth-tabs" role="tablist" aria-label="Acceso a la cuenta">
+        <button type="button" class="auth-tab" data-mode="login" role="tab">Iniciar sesión</button>
+        <button type="button" class="auth-tab" data-mode="signup" role="tab">Crear cuenta</button>
+      </div>
+      <form id="auth-form" class="auth-form">
+        <label id="auth-name-wrap" hidden>Nombre<input type="text" id="auth-name" maxlength="32" autocomplete="name" placeholder="Tu nombre"></label>
+        <label>Correo electrónico<input type="email" id="auth-email" autocomplete="email" required placeholder="tu@correo.com"></label>
+        <label id="auth-password-wrap">Contraseña<input type="password" id="auth-password" minlength="6" autocomplete="current-password" required placeholder="Tu contraseña"></label>
+        <label id="auth-confirm-wrap" hidden>Repetir contraseña<input type="password" id="auth-confirm" minlength="6" autocomplete="new-password" placeholder="Repite tu contraseña"></label>
+        <button class="btn-primary" id="auth-submit" type="submit">Entrar a mi cuenta</button>
+        <p class="note" id="auth-feedback" role="status" aria-live="polite"></p>
+      </form>`);
+    let mode = initialMode;
+    const form = $("#auth-form", modal);
+    const nameWrap = $("#auth-name-wrap", modal);
+    const confirmWrap = $("#auth-confirm-wrap", modal);
+    const password = $("#auth-password", modal);
+    const confirm = $("#auth-confirm", modal);
+    const submit = $("#auth-submit", modal);
+    const heading = $("#void-modal-title", modal);
+    const tabs = $$(".auth-tab", modal);
+    const feedback = $("#auth-feedback", modal);
+    function setMode(nextMode) {
+      mode = nextMode;
+      const signup = mode === "signup";
+      heading.textContent = signup ? "Crear cuenta" : "Iniciar sesión";
+      nameWrap.hidden = !signup;
+      confirmWrap.hidden = !signup;
+      $("#auth-name", modal).required = signup;
+      confirm.required = signup;
+      password.required = true;
+      submit.textContent = signup ? "Crear mi cuenta" : "Entrar a mi cuenta";
+      password.autocomplete = signup ? "new-password" : "current-password";
+      tabs.forEach(tab => {
+        const active = tab.dataset.mode === mode;
+        tab.classList.toggle("active", active);
+        tab.setAttribute("aria-selected", String(active));
+      });
+      feedback.textContent = "";
+    }
+    tabs.forEach(tab => tab.addEventListener("click", () => setMode(tab.dataset.mode)));
+    form.addEventListener("submit", async e => {
+      e.preventDefault();
+      if (!form.reportValidity()) return;
+      const email = $("#auth-email", modal).value.trim();
+      submit.disabled = true;
+      try {
+        const pass = password.value;
+        const name = $("#auth-name", modal).value.trim();
+        if (mode === "signup" && pass !== confirm.value) {
+          feedback.textContent = "Las contraseñas no coinciden. Vuelve a escribirlas.";
+          confirm.focus();
+          return;
+        }
+        submit.textContent = mode === "signup" ? "Creando cuenta…" : "Iniciando sesión…";
+        const result = mode === "signup"
+          ? await client.auth.signUp({
+              email,
+              password: pass,
+              options: {
+                data: { display_name: name },
+                emailRedirectTo: window.location.origin
+              }
+            })
+          : await client.auth.signInWithPassword({ email, password: pass });
+        if (result.error) throw result.error;
+        if (mode === "signup" && !result.data.session) {
+          feedback.textContent = "Cuenta enviada. Revisa tu correo para confirmar el registro y luego inicia sesión.";
+          return;
+        }
+        if (result.data.session) {
+          currentUser = result.data.user;
+          updateAccountUI();
+          await loadScripts();
+          feedback.textContent = "¡Sesión iniciada correctamente!";
+          setTimeout(() => modal.remove(), 500);
+        }
+      } catch (err) {
+        feedback.textContent = mapAuthError(err);
+      } finally {
+        if (modal.isConnected) {
+          submit.disabled = false;
+          submit.textContent = mode === "signup" ? "Crear mi cuenta" : "Entrar a mi cuenta";
+        }
+      }
+    });
+    setMode(initialMode);
+  }
+  function updateAccountUI() {
+    const button = $("#btn-account");
+    if (button) button.textContent = currentUser ? (currentUser.user_metadata?.display_name || "Mi cuenta") : "Crear cuenta";
+    const logout = $("#btn-logout");
+    if (logout) logout.textContent = currentUser ? "Cerrar sesión" : "Sesión cerrada";
+    const note = $(".support-box .note");
+    if (note) note.textContent = currentUser ? "Sesión activa. El soporte puede configurarse con un canal oficial." : "Inicia sesión para publicar contenido en la comunidad.";
+  }
+  $("#btn-account")?.addEventListener("click", () => currentUser ? openModal("Sesión activa", `<p>Conectado como <strong>${escapeHtml(currentUser.email)}</strong>.</p><p>Puedes cerrar sesión desde Ajustes.</p>`) : accountModal());
+  $("#btn-logout")?.addEventListener("click", async () => {
+    if (!client || !currentUser) return notice("No hay una sesión activa.");
+    const { error } = await client.auth.signOut();
+    if (error) return notice(error.message);
+    currentUser = null; updateAccountUI(); notice("Sesión cerrada.");
+  });
+
+  // Biblioteca pública de scripts: abrir, copiar y borrar los propios.
+  const scriptList = $("#script-list");
+  const scriptForm = $("#script-upload-form");
+  function renderScripts(items) {
+    const count = $("#stat-scripts");
+    if (count) count.textContent = String(items.length);
+    if (!items.length) { scriptList.innerHTML = '<div class="empty-feed">Todavía no hay scripts. Publica el primero desde Subir.</div>'; return; }
+    scriptList.innerHTML = items.map(s => `<article class="script-card">
+      <div class="script-icon">⌘</div><div class="script-info"><h3>${escapeHtml(s.title)}</h3><p>${escapeHtml(s.description || "Script de la comunidad")}</p><small>${escapeHtml(s.author_name || "Usuario VOID")}</small></div>
+      <button class="btn-sm" type="button" data-open-script="${s.id}">Abrir</button>
+      ${currentUser?.id === s.author_id ? `<button class="btn-sm danger-btn" type="button" data-delete-script="${s.id}">Eliminar</button>` : ""}
+    </article>`).join("");
+    scriptList.querySelectorAll("[data-open-script]").forEach(b => b.addEventListener("click", () => {
+      const s = items.find(x => x.id === b.dataset.openScript);
+      if (!s) return;
+      const modal = openModal(s.title, `<p>${escapeHtml(s.description || "")}</p><pre class="script-code-view"><code>${escapeHtml(s.code)}</code></pre><p class="note">Publicado por ${escapeHtml(s.author_name || "Usuario VOID")}</p>`);
+      const copy = document.createElement("button"); copy.className = "btn-primary"; copy.textContent = "Copiar código";
+      copy.addEventListener("click", async () => {
+        try { await navigator.clipboard.writeText(s.code); copy.textContent = "¡Código copiado!"; }
+        catch { const area=document.createElement("textarea"); area.value=s.code; modal.append(area); area.select(); document.execCommand("copy"); area.remove(); copy.textContent="¡Código copiado!"; }
+      });
+      $(".void-modal-body", modal).append(copy);
+    }));
+    scriptList.querySelectorAll("[data-delete-script]").forEach(b => b.addEventListener("click", async () => {
+      if (!currentUser || !await askConfirm("¿Eliminar este script? Esta acción no se puede deshacer.", "Eliminar script")) return;
+      const { error } = await client.from("scripts").delete().eq("id", b.dataset.deleteScript).eq("author_id", currentUser.id);
+      if (error) return notice("No se pudo eliminar: " + error.message);
+      await loadScripts();
+    }));
+  }
+  async function loadScripts() {
+    if (!scriptList) return;
+    if (!client) { scriptList.innerHTML='<div class="empty-feed">Conecta Supabase para activar la biblioteca.</div>'; return; }
+    scriptList.innerHTML='<div class="empty-feed">Cargando scripts…</div>';
+    const { data, error } = await client.from("scripts").select("id,author_id,author_name,title,description,code,created_at").order("created_at",{ascending:false}).limit(100);
+    if (error) { scriptList.innerHTML='<div class="empty-feed">No se pudieron cargar los scripts.</div>'; console.error(error); return; }
+    renderScripts(data || []);
+  }
+  scriptForm?.addEventListener("submit", async e => {
+    e.preventDefault();
+    if (!client) return notice("Primero configura Supabase.");
+    if (!currentUser) { accountModal(); return notice("Inicia sesión para publicar un script."); }
+    const title=$("#script-title").value.trim(), description=$("#script-description").value.trim(), code=$("#script-code").value.trim();
+    if (!title || !code) return notice("Escribe el nombre y el código del script.");
+    const button=$("#btn-script-upload"); button.disabled=true; button.textContent="Publicando…";
+    try {
+      const { error } = await client.from("scripts").insert({author_id:currentUser.id,author_name:currentUser.user_metadata?.display_name || currentUser.email.split("@")[0],title,description,code});
+      if (error) throw error;
+      scriptForm.reset(); await loadScripts(); notice("Script publicado en la sección Scripts.");
+    } catch(err) { notice(err.message || "No se pudo publicar el script."); }
+    finally { button.disabled=false; button.textContent="Publicar"; }
+  });
+
+  // Subida y feed público mediante Supabase Storage + Postgres
+  const form = $("#upload-form");
+  const fileInput = $("#up-file");
+  const fileZone = $("#file-zone");
+  const preview = $("#preview");
+  const feed = $("#feed");
+  function resetPreview() {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    previewUrl = null; currentFile = null;
+    if (preview) { preview.hidden = true; preview.replaceChildren(); }
+  }
+  function handleFile(file) {
+    if (!file) return;
+    if (selectedMediaKind === "image" && !file.type.startsWith("image/")) return notice("Selecciona una foto en la opción Fotos.");
+    if (selectedMediaKind === "video" && !file.type.startsWith("video/")) return notice("Selecciona un video en la opción Videos.");
+    if (file.size > 50 * 1024 * 1024) return notice("El archivo supera el límite de 50 MB.");
+    resetPreview(); currentFile = file; previewUrl = URL.createObjectURL(file);
+    const media = document.createElement(file.type.startsWith("video/") ? "video" : "img");
+    media.src = previewUrl;
+    if (media.tagName === "VIDEO") { media.controls = true; media.playsInline = true; }
+    else media.alt = "Vista previa";
+    preview.replaceChildren(media); preview.hidden = false;
+  }
+  let selectedMediaKind = "image";
+  const mediaKindButtons = $$(".media-kind-btn");
+  const zoneTitle = $("#file-zone-title");
+  const zoneHelp = $("#file-zone-help");
+  mediaKindButtons.forEach(button => button.addEventListener("click", () => {
+    selectedMediaKind = button.dataset.mediaKind;
+    mediaKindButtons.forEach(item => {
+      const active = item === button;
+      item.classList.toggle("active", active);
+      item.setAttribute("aria-pressed", String(active));
+    });
+    resetPreview();
+    if (fileInput) { fileInput.value = ""; fileInput.accept = selectedMediaKind === "video" ? "video/*" : "image/*"; }
+    if (zoneTitle) zoneTitle.textContent = selectedMediaKind === "video" ? "Selecciona o arrastra tus videos" : "Selecciona o arrastra tus fotos";
+    if (zoneHelp) zoneHelp.textContent = selectedMediaKind === "video" ? "MP4, WEBM y otros formatos de video" : "JPG, PNG y otros formatos de imagen";
+  }));
+  fileInput?.addEventListener("change", () => handleFile(fileInput.files?.[0]));
+  ["dragenter","dragover"].forEach(ev => fileZone?.addEventListener(ev, e => { e.preventDefault(); fileZone.classList.add("drag"); }));
+  ["dragleave","drop"].forEach(ev => fileZone?.addEventListener(ev, e => { e.preventDefault(); fileZone.classList.remove("drag"); }));
+  fileZone?.addEventListener("drop", e => handleFile(e.dataTransfer.files?.[0]));
+
+  function renderPosts(posts) {
+    const postCount = $("#stat-members");
+    if (postCount) postCount.textContent = String(posts.length);
+    if (!posts.length) { feed.innerHTML = '<div class="empty-feed">Todavía no hay publicaciones.<br>¡Comparte la primera!</div>'; return; }
+    feed.innerHTML = posts.map(p => {
+      const media = p.media_type === "video"
+        ? `<video src="${escapeHtml(p.media_url)}" controls playsinline preload="metadata"></video>`
+        : `<img src="${escapeHtml(p.media_url)}" alt="${escapeHtml(p.title)}" loading="lazy">`;
+      const own = currentUser?.id === p.author_id;
+      return `<article class="post"><div class="post-media">${media}</div><div class="post-body">
+        <h4>${escapeHtml(p.title)}</h4>${p.comment ? `<p>${escapeHtml(p.comment)}</p>` : ""}
+        <div class="post-meta">${escapeHtml(p.author_name || "Usuario VOID")} · ${escapeHtml(formatDate(p.created_at))}</div>${own ? `<button class="btn-sm danger-btn" type="button" data-delete-post="${p.id}">Eliminar publicación</button>` : ""}
+      </div></article>`;
+    }).join("");
+    feed.querySelectorAll("[data-delete-post]").forEach(b => b.addEventListener("click", async () => {
+      if (!currentUser || !await askConfirm("¿Eliminar tu publicación y su archivo?", "Eliminar publicación")) return;
+      const post=posts.find(p=>p.id===b.dataset.deletePost);
+      const {error}=await client.from("posts").delete().eq("id",post.id).eq("author_id",currentUser.id);
+      if(error) return notice("No se pudo eliminar: "+error.message);
+      if(post?.media_path) await client.storage.from("void-media").remove([post.media_path]);
+      await loadFeed();
+    }));
+  }
+  async function loadFeed() {
+    if (!feed) return;
+    if (!client) { feed.innerHTML='<div class="empty-feed">El feed público estará disponible cuando conectes Supabase.</div>'; return; }
+    feed.innerHTML='<div class="empty-feed">Cargando publicaciones…</div>';
+    const { data, error } = await client.from("posts").select("id,author_id,title,comment,media_url,media_path,media_type,author_name,created_at").order("created_at", { ascending:false }).limit(50);
+    if (error) { feed.innerHTML='<div class="empty-feed">No se pudieron cargar las publicaciones.</div>'; console.error(error); return; }
+    renderPosts(data || []);
+  }
+  form?.addEventListener("submit", async e => {
+    e.preventDefault();
+    if (!client) return notice("Primero configura Supabase.");
+    if (!currentUser) { accountModal(); return notice("Inicia sesión para publicar."); }
+    if (!currentFile) return notice("Selecciona una foto o un video primero.");
+    const title = $("#up-title").value.trim();
+    const comment = $("#up-comment").value.trim();
+    if (!title) return notice("Escribe un título para la publicación.");
+    const submit = $("#btn-upload");
+    submit.disabled = true; submit.textContent = "Publicando…";
+    try {
+      const ext = (currentFile.name.split(".").pop() || (currentFile.type.startsWith("video/") ? "mp4" : "jpg")).toLowerCase().replace(/[^a-z0-9]/g,"");
+      const path = `${currentUser.id}/${crypto.randomUUID()}.${ext}`;
+      const upload = await client.storage.from("void-media").upload(path, currentFile, { cacheControl:"3600", upsert:false, contentType:currentFile.type });
+      if (upload.error) throw upload.error;
+      const { data: publicData } = client.storage.from("void-media").getPublicUrl(path);
+      const { error } = await client.from("posts").insert({
+        author_id:currentUser.id, author_name:currentUser.user_metadata?.display_name || currentUser.email.split("@")[0],
+        title, comment, media_url:publicData.publicUrl, media_path:path,
+        media_type:currentFile.type.startsWith("video/") ? "video" : "image"
+      });
+      if (error) {
+        await client.storage.from("void-media").remove([path]);
+        throw error;
+      }
+      form.reset(); resetPreview(); await loadFeed(); notice("¡Publicación compartida con toda la comunidad!");
+    } catch (err) { notice(err.message || "No se pudo publicar. Inténtalo de nuevo."); }
+    finally { submit.disabled = false; submit.textContent = "Publicar"; }
+  });
+
+  // Soporte: no simular envíos sin un canal real conectado
+  $("#btn-send-support")?.addEventListener("click", () => {
+    const message = $("#support-msg").value.trim();
+    if (!message) return notice("Escribe un mensaje primero.");
+    if (!currentUser) return accountModal();
+    notice("Tu sesión está activa. Para recibir mensajes, configura un canal de soporte oficial.");
+  });
+
+  // Idioma: se conserva el selector sin fingir una traducción inexistente
+  $("#lang-select")?.addEventListener("change", e => {
+    if (e.target.value === "en") notice("La traducción al inglés todavía no está disponible.");
+  });
+
+  async function init() {
+    if (!client) {
+      feed.innerHTML = '<div class="empty-feed">El feed público estará disponible cuando conectes Supabase.</div>';
+      updateAccountUI(); await loadScripts(); return;
+    }
+    const { data } = await client.auth.getSession();
+    currentUser = data.session?.user || null;
+    client.auth.onAuthStateChange((_event, session) => { currentUser = session?.user || null; updateAccountUI(); loadScripts(); });
+    updateAccountUI(); await Promise.all([loadFeed(), loadScripts()]);
+  }
+  init();
+})();
