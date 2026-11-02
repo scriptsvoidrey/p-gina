@@ -12,44 +12,17 @@ create table if not exists public.posts (
   media_type text not null check (media_type in ('image','video')),
   created_at timestamptz not null default now()
 );
-
 alter table public.posts enable row level security;
 drop policy if exists "Public can read posts" on public.posts;
-create policy "Public can read posts" on public.posts for select using (true);
+create policy "Public can read posts" on public.posts for select to anon, authenticated using (true);
 drop policy if exists "Signed-in users can publish as themselves" on public.posts;
-create policy "Signed-in users can publish as themselves" on public.posts
-  for insert to authenticated with check (auth.uid() = author_id);
+create policy "Signed-in users can publish as themselves" on public.posts for insert to authenticated with check ((select auth.uid()) = author_id);
 drop policy if exists "Authors can delete own posts" on public.posts;
-create policy "Authors can delete own posts" on public.posts
-  for delete to authenticated using (auth.uid() = author_id);
+create policy "Authors can delete own posts" on public.posts for delete to authenticated using ((select auth.uid()) = author_id);
+grant select on public.posts to anon, authenticated;
+grant insert, delete on public.posts to authenticated;
+create index if not exists posts_author_id_idx on public.posts(author_id);
 
-insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('void-media', 'void-media', true, 52428800,
-  array['image/jpeg','image/png','image/webp','image/gif','video/mp4','video/webm','video/quicktime'])
-on conflict (id) do update set
-  public = true,
-  file_size_limit = 52428800,
-  allowed_mime_types = excluded.allowed_mime_types;
-
-drop policy if exists "Public can view VOID media" on storage.objects;
-create policy "Public can view VOID media" on storage.objects
-  for select using (bucket_id = 'void-media');
-drop policy if exists "Users upload to own VOID folder" on storage.objects;
-create policy "Users upload to own VOID folder" on storage.objects
-  for insert to authenticated with check (
-    bucket_id = 'void-media' and (storage.foldername(name))[1] = auth.uid()::text
-  );
-drop policy if exists "Users delete own VOID media" on storage.objects;
-create policy "Users delete own VOID media" on storage.objects
-  for delete to authenticated using (
-    bucket_id = 'void-media' and (storage.foldername(name))[1] = auth.uid()::text
-  );
-
--- Nota: la lectura de posts y archivos es pública por diseño.
--- Nunca pongas la service_role key en el navegador.
-
--- Biblioteca de scripts públicos: cualquier visitante autenticado puede leer;
--- cada autor solo puede crear y borrar sus propios scripts.
 create table if not exists public.scripts (
   id uuid primary key default gen_random_uuid(),
   author_id uuid not null references auth.users(id) on delete cascade,
@@ -61,10 +34,24 @@ create table if not exists public.scripts (
 );
 alter table public.scripts enable row level security;
 drop policy if exists "Public can read scripts" on public.scripts;
-create policy "Public can read scripts" on public.scripts for select using (true);
+create policy "Public can read scripts" on public.scripts for select to anon, authenticated using (true);
 drop policy if exists "Authenticated users publish scripts" on public.scripts;
-create policy "Authenticated users publish scripts" on public.scripts
-  for insert to authenticated with check (auth.uid() = author_id);
+create policy "Authenticated users publish scripts" on public.scripts for insert to authenticated with check ((select auth.uid()) = author_id);
 drop policy if exists "Authors delete own scripts" on public.scripts;
-create policy "Authors delete own scripts" on public.scripts
-  for delete to authenticated using (auth.uid() = author_id);
+create policy "Authors delete own scripts" on public.scripts for delete to authenticated using ((select auth.uid()) = author_id);
+grant select on public.scripts to anon, authenticated;
+grant insert, delete on public.scripts to authenticated;
+create index if not exists scripts_author_id_idx on public.scripts(author_id);
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('void-media','void-media',true,52428800,array['image/jpeg','image/png','image/webp','image/gif','video/mp4','video/webm','video/quicktime'])
+on conflict (id) do update set public=true,file_size_limit=excluded.file_size_limit,allowed_mime_types=excluded.allowed_mime_types;
+drop policy if exists "Public can view VOID media" on storage.objects;
+create policy "Public can view VOID media" on storage.objects for select to anon, authenticated using (bucket_id='void-media');
+drop policy if exists "Users upload to own VOID folder" on storage.objects;
+create policy "Users upload to own VOID folder" on storage.objects for insert to authenticated with check (bucket_id='void-media' and (storage.foldername(name))[1]=(select auth.uid())::text);
+drop policy if exists "Users delete own VOID media" on storage.objects;
+create policy "Users delete own VOID media" on storage.objects for delete to authenticated using (bucket_id='void-media' and (storage.foldername(name))[1]=(select auth.uid())::text);
+
+-- Las publicaciones y archivos se pueden ver públicamente.
+-- Nunca expongas la service_role o secret key en el navegador.
