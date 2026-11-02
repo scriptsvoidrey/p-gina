@@ -146,43 +146,18 @@
   }
   function updateAccountUI() {
     const button = $("#btn-account");
-    if (button) button.textContent = currentUser ? getLocalName() : "Crear cuenta / Entrar";
+    if (button) button.textContent = currentUser ? getLocalName() : "Iniciar sesión";
     const status = $("#account-status");
     if (status) status.textContent = currentUser ? "Sesión iniciada como " + getLocalName() : "No has iniciado sesión";
   }
-  function authModal(initialTab = "register") {
+  function authModal() {
     if (!supabaseClient) return notice("No se pudo conectar con el servicio de cuentas. Revisa la configuración de Supabase.");
-    const markup = '<p class="note">Regístrate con tu nombre de usuario y una contraseña. No necesitas correo electrónico.</p>' +
-      '<div class="auth-tabs"><button type="button" class="btn-sm auth-tab" data-auth-tab="register">Crear cuenta</button><button type="button" class="btn-sm auth-tab" data-auth-tab="login">Iniciar sesión</button></div>' +
-      '<form id="register-form" class="auth-form"><label>Nombre de usuario<input id="register-name" type="text" minlength="3" maxlength="24" autocomplete="username" placeholder="Tu nombre" required pattern="[A-Za-z0-9_.-]+"></label>' +
-      '<label>Contraseña<input id="register-password" type="password" minlength="8" autocomplete="new-password" placeholder="Mínimo 8 caracteres" required></label>' +
-      '<button class="btn-primary" type="submit">Crear mi cuenta</button></form>' +
-      '<form id="login-form" class="auth-form" hidden><label>Nombre de usuario<input id="login-name" type="text" maxlength="24" autocomplete="username" placeholder="Tu nombre de usuario" required></label>' +
+    const markup = '<p class="note">Inicia sesión con el nombre de usuario y la contraseña de tu cuenta.</p>' +
+      '<form id="login-form" class="auth-form"><label>Nombre de usuario<input id="login-name" type="text" maxlength="24" autocomplete="username" placeholder="Tu nombre de usuario" required></label>' +
       '<label>Contraseña<input id="login-password" type="password" autocomplete="current-password" placeholder="Tu contraseña" required></label><button class="btn-primary" type="submit">Entrar</button></form>' +
       '<p id="auth-message" class="note" role="status" aria-live="polite"></p>';
-    const modal = openModal("Tu cuenta P-GINA", markup);
-    const registerForm = $("#register-form", modal), loginForm = $("#login-form", modal), message = $("#auth-message", modal);
-    const setTab = tab => {
-      registerForm.hidden = tab !== "register"; loginForm.hidden = tab !== "login";
-      modal.querySelectorAll("[data-auth-tab]").forEach(b => b.classList.toggle("active", b.dataset.authTab === tab));
-      message.textContent = "";
-    };
-    modal.querySelectorAll("[data-auth-tab]").forEach(b => b.addEventListener("click", () => setTab(b.dataset.authTab)));
-    registerForm.addEventListener("submit", async event => {
-      event.preventDefault();
-      const name = $("#register-name", modal).value.trim(), password = $("#register-password", modal).value;
-      if (!/^[A-Za-z0-9_.-]{3,24}$/.test(name)) { message.textContent = "El nombre debe tener 3–24 caracteres: letras, números, punto, guion o guion bajo."; return; }
-      if (password.length < 8) { message.textContent = "La contraseña debe tener al menos 8 caracteres."; return; }
-      const submit = registerForm.querySelector('button[type="submit"]');
-      submit.disabled = true; submit.textContent = "Creando cuenta…";
-      try {
-        const result = await supabaseClient.auth.signUp({ email: usernameToEmail(name), password, options: { data: { display_name: name } } });
-        if (result.error) throw result.error;
-        if (!result.data.session) { message.textContent = "Supabase exige confirmar un correo. Para registro solo con nombre, desactiva la confirmación de email en Authentication → Providers → Email."; return; }
-        currentUser = result.data.user; localStorage.setItem(LOCAL_NAME_KEY, name); updateAccountUI(); modal.remove(); notice("¡Cuenta creada! Ya puedes usar P-GINA.");
-      } catch (error) { message.textContent = error.message || "No se pudo crear la cuenta."; }
-      finally { submit.disabled = false; submit.textContent = "Crear mi cuenta"; }
-    });
+    const modal = openModal("Iniciar sesión", markup);
+    const loginForm = $("#login-form", modal), message = $("#auth-message", modal);
     loginForm.addEventListener("submit", async event => {
       event.preventDefault();
       const name = $("#login-name", modal).value.trim(), password = $("#login-password", modal).value;
@@ -197,16 +172,15 @@
       } catch (error) { message.textContent = "No se pudo iniciar sesión. Comprueba tu nombre y contraseña."; }
       finally { submit.disabled = false; submit.textContent = "Entrar"; }
     });
-    setTab(initialTab);
   }
   async function signOut() {
-    if (!supabaseClient || !currentUser) { authModal("login"); return; }
+    if (!supabaseClient || !currentUser) { authModal(); return; }
     const result = await supabaseClient.auth.signOut();
     if (result.error) { notice(result.error.message || "No se pudo cerrar la sesión."); return; }
     currentUser = null; updateAccountUI(); notice("Sesión cerrada correctamente.");
   }
   $("#btn-account")?.addEventListener("click", () => {
-    if (!currentUser) { authModal("register"); return; }
+    if (!currentUser) { authModal(); return; }
     const markup = '<p>Sesión iniciada como <strong>' + escapeHtml(getLocalName()) + '</strong>.</p><button type="button" class="btn-primary" id="account-signout">Cerrar sesión</button>';
     const modal = openModal("Tu cuenta", markup);
     $("#account-signout", modal).addEventListener("click", async () => { modal.remove(); await signOut(); });
