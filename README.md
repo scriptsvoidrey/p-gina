@@ -4,7 +4,7 @@ Aplicación web estática con navegación inferior, biblioteca local de scripts,
 
 ## Cuentas
 
-- El usuario crea su cuenta con un nombre de usuario, contraseña y confirmación de contraseña.
+- El usuario crea su cuenta con solo un nombre de usuario y una contraseña.
 - Para iniciar sesión solo necesita el nombre de usuario y la contraseña.
 - El nombre admite entre 3 y 24 caracteres: letras ASCII, números, punto, guion y guion bajo.
 - La contraseña debe tener al menos 8 caracteres.
@@ -25,7 +25,7 @@ El esquema `supabase-setup.sql` define las tablas `posts` y `scripts`, sus polí
 
 - Navegación entre Inicio, Scripts, Subir, Comunidad, Soporte y Ajustes.
 - Registro, inicio y cierre de sesión con Supabase Auth.
-- Validación de contraseña y confirmación al crear la cuenta.
+- Validación del nombre de usuario y longitud mínima de contraseña.
 - Selector de tema persistente.
 - Publicación de scripts y fotos/videos en el almacenamiento local del navegador. Estos datos no se sincronizan entre dispositivos ni usuarios.
 - El botón de soporte copia el mensaje; no hay un canal de soporte conectado todavía.
