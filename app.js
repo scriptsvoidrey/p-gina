@@ -153,7 +153,7 @@
   function authModal(initialTab = "register") {
     if (!supabaseClient) return notice("No se pudo conectar con el servicio de cuentas. Revisa la configuración de Supabase.");
     const markup = '<p class="note">Regístrate con tu nombre de usuario y una contraseña. No necesitas correo electrónico.</p>' +
-      '<div class="auth-tabs"><button type="button" class="btn-sm" data-auth-tab="register">Crear cuenta</button><button type="button" class="btn-sm" data-auth-tab="login">Iniciar sesión</button></div>' +
+      '<div class="auth-tabs"><button type="button" class="btn-sm auth-tab" data-auth-tab="register">Crear cuenta</button><button type="button" class="btn-sm auth-tab" data-auth-tab="login">Iniciar sesión</button></div>' +
       '<form id="register-form" class="auth-form"><label>Nombre de usuario<input id="register-name" type="text" minlength="3" maxlength="24" autocomplete="username" placeholder="Tu nombre" required pattern="[A-Za-z0-9_.-]+"></label>' +
       '<label>Contraseña<input id="register-password" type="password" minlength="8" autocomplete="new-password" placeholder="Mínimo 8 caracteres" required></label>' +
       '<button class="btn-primary" type="submit">Crear mi cuenta</button></form>' +
