@@ -3,14 +3,20 @@
   const $ = (s, el = document) => el.querySelector(s);
   const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 
-  // ——— Modo local ———
-  // Sin autenticación de Supabase. Todo se guarda en localStorage del navegador.
+  // Autenticación real mediante Supabase; las contraseñas nunca se guardan en el navegador.
+  let currentUser = null;
+  let supabaseClient = null;
+  try {
+    const cfg = window.VOID_SUPABASE;
+    if (window.supabase?.createClient && cfg?.url && cfg?.anonKey) supabaseClient = window.supabase.createClient(cfg.url, cfg.anonKey);
+  } catch (error) { console.error("Supabase:", error); }
   const LOCAL_NAME_KEY = "void-local-name";
   const LOCAL_SCRIPTS_KEY = "void-local-scripts";
   const LOCAL_POSTS_KEY = "void-local-posts";
   const LOCAL_ID_KEY = "void-local-id";
 
   function getLocalId() {
+    if (currentUser?.id) return currentUser.id;
     let id = localStorage.getItem(LOCAL_ID_KEY);
     if (!id) {
       id = "local-" + crypto.randomUUID();
@@ -20,7 +26,7 @@
   }
 
   function getLocalName() {
-    return localStorage.getItem(LOCAL_NAME_KEY) || "Usuario VOID";
+    return currentUser?.user_metadata?.display_name || localStorage.getItem(LOCAL_NAME_KEY) || "Usuario VOID";
   }
 
   function setLocalName(name) {
@@ -108,7 +114,7 @@
 
   function escapeHtml(value) {
     return String(value ?? "").replace(/[&<>"']/g, c => ({
-      "&": "&", "<": "<", ">": ">", '"': """, "'": "&#39;"
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
     }[c]));
   }
 
@@ -133,39 +139,95 @@
     return modal;
   }
 
-  // ——— Nombre local (sustituye a la cuenta) ———
+  // ——— Registro, inicio y cierre de sesión ———
+  function usernameToEmail(name) {
+    const slug = name.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9._-]/g, "");
+    return slug + "@users.p-gina.invalid";
+  }
   function updateAccountUI() {
-    const name = getLocalName();
     const button = $("#btn-account");
-    if (button) button.textContent = name === "Usuario VOID" ? "Tu nombre" : name;
+    if (button) button.textContent = currentUser ? getLocalName() : "Crear cuenta / Entrar";
     const logout = $("#btn-logout");
-    if (logout) logout.textContent = "Modo local";
+    if (logout) logout.textContent = currentUser ? "Cerrar sesión" : "Iniciar sesión";
     const note = $(".support-box .note");
-    if (note) note.textContent = "Modo local activo. Los datos se guardan solo en este navegador.";
+    if (note) note.textContent = currentUser ? "Sesión iniciada como " + getLocalName() + "." : "Inicia sesión para identificar tus publicaciones.";
   }
-
-  function nameModal() {
-    const modal = openModal("Tu nombre", `
-      <p class="note">Modo local: no hay cuentas. Solo eliges un nombre para tus publicaciones.</p>
-      <form id="name-form" class="auth-form">
-        <label>Nombre<input type="text" id="local-name" maxlength="32" autocomplete="nickname" placeholder="Tu nombre" value="${escapeHtml(getLocalName() === "Usuario VOID" ? "" : getLocalName())}"></label>
-        <button class="btn-primary" type="submit">Guardar nombre</button>
-      </form>`);
-    $("#name-form", modal).addEventListener("submit", e => {
-      e.preventDefault();
-      const name = setLocalName($("#local-name", modal).value);
-      updateAccountUI();
-      notice("Nombre guardado: " + name);
-      modal.remove();
+  function authModal(initialTab = "register") {
+    if (!supabaseClient) return notice("No se pudo conectar con el servicio de cuentas. Revisa la configuración de Supabase.");
+    const markup = '<p class="note">Regístrate con tu nombre de usuario y una contraseña. No necesitas correo electrónico.</p>' +
+      '<div class="auth-tabs"><button type="button" class="btn-sm" data-auth-tab="register">Crear cuenta</button><button type="button" class="btn-sm" data-auth-tab="login">Iniciar sesión</button></div>' +
+      '<form id="register-form" class="auth-form"><label>Nombre de usuario<input id="register-name" type="text" minlength="3" maxlength="24" autocomplete="username" placeholder="Tu nombre" required pattern="[A-Za-z0-9_.-]+"></label>' +
+      '<label>Contraseña<input id="register-password" type="password" minlength="8" autocomplete="new-password" placeholder="Mínimo 8 caracteres" required></label>' +
+      '<label>Repite la contraseña<input id="register-confirm" type="password" minlength="8" autocomplete="new-password" placeholder="Escribe la misma contraseña" required></label><button class="btn-primary" type="submit">Crear mi cuenta</button></form>' +
+      '<form id="login-form" class="auth-form" hidden><label>Nombre de usuario<input id="login-name" type="text" maxlength="24" autocomplete="username" placeholder="Tu nombre de usuario" required></label>' +
+      '<label>Contraseña<input id="login-password" type="password" autocomplete="current-password" placeholder="Tu contraseña" required></label><button class="btn-primary" type="submit">Entrar</button></form>' +
+      '<p id="auth-message" class="note" role="status" aria-live="polite"></p>';
+    const modal = openModal("Tu cuenta P-GINA", markup);
+    const registerForm = $("#register-form", modal), loginForm = $("#login-form", modal), message = $("#auth-message", modal);
+    const setTab = tab => {
+      registerForm.hidden = tab !== "register"; loginForm.hidden = tab !== "login";
+      modal.querySelectorAll("[data-auth-tab]").forEach(b => b.classList.toggle("active", b.dataset.authTab === tab));
+      message.textContent = "";
+    };
+    modal.querySelectorAll("[data-auth-tab]").forEach(b => b.addEventListener("click", () => setTab(b.dataset.authTab)));
+    registerForm.addEventListener("submit", async event => {
+      event.preventDefault();
+      const name = $("#register-name", modal).value.trim(), password = $("#register-password", modal).value, confirm = $("#register-confirm", modal).value;
+      if (!/^[A-Za-z0-9_.-]{3,24}$/.test(name)) { message.textContent = "El nombre debe tener 3–24 caracteres: letras, números, punto, guion o guion bajo."; return; }
+      if (password.length < 8) { message.textContent = "La contraseña debe tener al menos 8 caracteres."; return; }
+      if (password !== confirm) { message.textContent = "Las contraseñas no coinciden."; return; }
+      const submit = registerForm.querySelector('button[type="submit"]');
+      submit.disabled = true; submit.textContent = "Creando cuenta…";
+      try {
+        const result = await supabaseClient.auth.signUp({ email: usernameToEmail(name), password, options: { data: { display_name: name } } });
+        if (result.error) throw result.error;
+        if (!result.data.session) { message.textContent = "Supabase exige confirmar un correo. Para registro solo con nombre, desactiva la confirmación de email en Authentication → Providers → Email."; return; }
+        currentUser = result.data.user; localStorage.setItem(LOCAL_NAME_KEY, name); updateAccountUI(); modal.remove(); notice("¡Cuenta creada! Ya puedes usar P-GINA.");
+      } catch (error) { message.textContent = error.message || "No se pudo crear la cuenta."; }
+      finally { submit.disabled = false; submit.textContent = "Crear mi cuenta"; }
     });
+    loginForm.addEventListener("submit", async event => {
+      event.preventDefault();
+      const name = $("#login-name", modal).value.trim(), password = $("#login-password", modal).value;
+      if (!name || !password) { message.textContent = "Escribe tu nombre y contraseña."; return; }
+      const submit = loginForm.querySelector('button[type="submit"]');
+      submit.disabled = true; submit.textContent = "Entrando…";
+      try {
+        const result = await supabaseClient.auth.signInWithPassword({ email: usernameToEmail(name), password });
+        if (result.error) throw result.error;
+        currentUser = result.data.user; localStorage.setItem(LOCAL_NAME_KEY, currentUser.user_metadata?.display_name || name);
+        updateAccountUI(); modal.remove(); notice("Sesión iniciada. ¡Bienvenido a P-GINA!");
+      } catch (error) { message.textContent = "No se pudo iniciar sesión. Comprueba tu nombre y contraseña."; }
+      finally { submit.disabled = false; submit.textContent = "Entrar"; }
+    });
+    setTab(initialTab);
   }
-
-  $("#btn-account")?.addEventListener("click", nameModal);
-  $("#btn-logout")?.addEventListener("click", () => {
-    notice("Estás en modo local. No hay sesión que cerrar. Tus scripts y publicaciones se guardan solo en este dispositivo.");
+  async function signOut() {
+    if (!supabaseClient || !currentUser) { authModal("login"); return; }
+    const result = await supabaseClient.auth.signOut();
+    if (result.error) { notice(result.error.message || "No se pudo cerrar la sesión."); return; }
+    currentUser = null; updateAccountUI(); notice("Sesión cerrada correctamente.");
+  }
+  $("#btn-account")?.addEventListener("click", () => {
+    if (!currentUser) { authModal("register"); return; }
+    const markup = '<p>Sesión iniciada como <strong>' + escapeHtml(getLocalName()) + '</strong>.</p><button type="button" class="btn-primary" id="account-signout">Cerrar sesión</button>';
+    const modal = openModal("Tu cuenta", markup);
+    $("#account-signout", modal).addEventListener("click", async () => { modal.remove(); await signOut(); });
   });
+  $("#btn-logout")?.addEventListener("click", signOut);
+  if (supabaseClient) {
+    supabaseClient.auth.onAuthStateChange((_event, session) => {
+      currentUser = session?.user || null;
+      if (currentUser?.user_metadata?.display_name) localStorage.setItem(LOCAL_NAME_KEY, currentUser.user_metadata.display_name);
+      updateAccountUI();
+    });
+    supabaseClient.auth.getSession().then(({ data }) => {
+      currentUser = data.session?.user || null; updateAccountUI(); loadFeed(); loadScripts();
+    }).catch(error => console.error("Error recuperando sesión:", error));
+  }
 
   // ——— Scripts (localStorage) ———
+
   const scriptList = $("#script-list");
   const scriptForm = $("#script-upload-form");
 
@@ -280,7 +342,7 @@
     if (!file) return;
     if (selectedMediaKind === "image" && !file.type.startsWith("image/")) return notice("Selecciona una foto en la opción Fotos.");
     if (selectedMediaKind === "video" && !file.type.startsWith("video/")) return notice("Selecciona un video en la opción Videos.");
-    if (file.size > 50 * 1024 * 1024) return notice("El archivo supera el límite de 50 MB.");
+    if (file.size > 4 * 1024 * 1024) return notice("El archivo supera el límite de 4 MB para el almacenamiento local.");
     resetPreview();
     currentFile = file;
     previewUrl = URL.createObjectURL(file);
