@@ -39,65 +39,45 @@
             <span class="lbl">Scripts</span>
           </div>
           <div class="stat">
-            <span class="num" id="stat-runs">369.1K</span>
-            <span class="lbl">Ejecuciones</span>
+            <span class="num">VOID</span>
+            <span class="lbl">Plataforma</span>
           </div>
           <div class="stat">
-            <span class="num" id="stat-members">4,112</span>
-            <span class="lbl">Miembros</span>
+            <span class="num" id="stat-members">0</span>
+            <span class="lbl">Publicaciones</span>
           </div>
         </div>
 
         <article class="card about">
           <h2>Sobre VOID Hub</h2>
           <p>Espacio creado para compartir scripts, clips y herramientas de la comunidad.</p>
-          <p>Actualizaciones constantes en los scripts principales. Prioridad en dispositivos de gama baja con boost de rendimiento.</p>
+          <p>Encuentra recursos, comparte contenido y descubre herramientas publicadas por la comunidad.</p>
           <p>Sube tus videos y fotos, comenta y comparte con todos desde la pestaña <strong>Subir</strong>.</p>
-          <p class="thanks">Gracias por usar VOID. Disfruta la experiencia.</p>
+          <p class="thanks">Un espacio para compartir y descubrir.</p>
         </article>
       </section>
 
       <!-- SCRIPTS -->
       <section class="panel" id="panel-scripts">
         <h2 class="section-title">Scripts disponibles</h2>
-        <div class="script-grid" id="script-list">
-          <div class="script-card">
-            <div class="script-icon">⚔️</div>
-            <h3>Duelos</h3>
-            <p>Actualizaciones semanales</p>
-            <button class="btn-sm">Abrir</button>
-          </div>
-          <div class="script-card">
-            <div class="script-icon">🔥</div>
-            <h3>Blood Strike</h3>
-            <p>Ranked · Salas · Boost</p>
-            <button class="btn-sm">Abrir</button>
-          </div>
-          <div class="script-card">
-            <div class="script-icon">🎯</div>
-            <h3>Aim Assist</h3>
-            <p>Configuración ligera</p>
-            <button class="btn-sm">Abrir</button>
-          </div>
-          <div class="script-card">
-            <div class="script-icon">⚡</div>
-            <h3>Performance+</h3>
-            <p>Para dispositivos bajos</p>
-            <button class="btn-sm">Abrir</button>
-          </div>
-          <div class="script-card">
-            <div class="script-icon">📦</div>
-            <h3>Pack Extra</h3>
-            <p>Utilidades varias</p>
-            <button class="btn-sm">Abrir</button>
-          </div>
-        </div>
+        <p class="hint">Scripts publicados por la comunidad. Abre uno para ver y copiar su código.</p>
+        <div class="script-grid" id="script-list"><div class="empty-feed">Todavía no hay scripts publicados.</div></div>
       </section>
 
       <!-- UPLOAD / COMMUNITY FEED -->
       <section class="panel" id="panel-upload">
-        <h2 class="section-title">Subir contenido</h2>
-        <p class="hint">Todo lo que subas aquí es público para toda la comunidad.</p>
+        <h2 class="section-title">Publicar en VOID</h2>
+        <p class="hint">Comparte un script en la biblioteca o una foto/video en el feed público.</p>
+        <section class="card script-publish">
+          <h3>Publicar un script</h3>
+          <form id="script-upload-form" class="upload-form compact-form">
+            <label>Nombre del script<input type="text" id="script-title" maxlength="80" placeholder="Ej: Mi script de utilidad" required></label>
+            <label>Descripción<textarea id="script-description" maxlength="400" rows="2" placeholder="Qué hace este script..."></textarea></label>
+            <label>Código del script<textarea id="script-code" class="code-input" rows="9" spellcheck="false" placeholder="Pega aquí tu código..." required></textarea></label>
+            <button type="submit" class="btn-primary" id="btn-script-upload">Publicar en Scripts</button>
+          </form>
+        </section>
+        <h3 class="feed-title">Publicar foto o video</h3>
 
         <form class="upload-form" id="upload-form">
           <label>
@@ -132,7 +112,7 @@
         <div class="card discord">
           <h3>Discord</h3>
           <p>Únete a la comunidad, comparte clips y recibe anuncios.</p>
-          <a class="btn-primary" href="https://discord.com" target="_blank" rel="noopener">Unirme al Discord</a>
+          <p class="note">El enlace oficial de invitación se publicará aquí cuando esté disponible.</p>
         </div>
       </section>
 
@@ -216,6 +196,8 @@
     </nav>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

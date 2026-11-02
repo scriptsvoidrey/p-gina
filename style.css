@@ -579,3 +579,30 @@ html, body {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+
+/* VOID Hub dialogs and account forms */
+.void-modal { position:fixed; inset:0; z-index:1000; display:grid; place-items:center; padding:18px; }
+.void-modal-backdrop { position:absolute; inset:0; background:rgba(0,0,0,.72); backdrop-filter:blur(7px); }
+.void-modal-card { position:relative; width:min(100%,440px); max-height:85vh; overflow:auto; padding:24px; border:1px solid var(--border); border-radius:20px; background:var(--surface); box-shadow:0 24px 80px rgba(0,0,0,.4); }
+.void-modal-card h2 { margin:0 34px 16px 0; font-size:1.3rem; }
+.void-modal-close { position:absolute; right:14px; top:12px; width:34px; height:34px; border:1px solid var(--border); border-radius:10px; background:var(--surface2); color:var(--text); font-size:24px; cursor:pointer; }
+.void-modal-body p { color:var(--muted); line-height:1.55; margin:10px 0; }
+.auth-tabs { display:flex; gap:8px; margin-bottom:16px; }
+.auth-tabs button { flex:1; }
+.auth-form, .auth-form label { display:flex; flex-direction:column; gap:8px; }
+.auth-form { gap:14px; }
+.auth-form label { color:var(--muted); font-size:13px; font-weight:600; }
+.auth-form input { width:100%; padding:12px; border:1px solid var(--border); border-radius:10px; background:var(--surface2); color:var(--text); font:inherit; }
+.auth-form button:disabled, .upload-form button:disabled { opacity:.6; cursor:wait; }
+
+/* VOID scripts library and ownership controls */
+.script-publish { margin-bottom:22px; }
+.compact-form { margin:14px 0 0; padding:0; border:0; background:transparent; }
+.upload-form textarea.code-input { min-height:180px; font-family:var(--mono); font-size:12px; line-height:1.55; }
+.script-info { min-width:0; }
+.script-info p { overflow-wrap:anywhere; }
+.script-info small { color:var(--muted); font-size:11px; }
+.script-code-view { max-height:45vh; overflow:auto; padding:14px; border:1px solid var(--border); border-radius:12px; background:var(--bg); white-space:pre-wrap; overflow-wrap:anywhere; font:12px/1.6 var(--mono); color:var(--text); }
+.danger-btn { color:var(--danger); border-color:color-mix(in srgb,var(--danger) 50%,var(--border)); margin-top:8px; }
+.script-card { grid-template-columns:auto minmax(0,1fr) auto; }
