@@ -95,7 +95,11 @@
     const status = $("#account-status");
     if (status) status.textContent = currentUser ? "Sesión iniciada como " + getLocalName() : "No has iniciado sesión";
     const homeAuth = $("#home-auth-btn");
-    if (homeAuth) homeAuth.textContent = currentUser ? "Mi cuenta" : "Iniciar sesión";
+    if (homeAuth) {
+      const desc = homeAuth.querySelector(".quick-desc");
+      if (desc) desc.textContent = currentUser ? getLocalName() : "Iniciar sesión";
+      else homeAuth.textContent = currentUser ? "Mi cuenta" : "Iniciar sesión";
+    }
     const statAccount = $("#stat-account");
     if (statAccount) statAccount.textContent = currentUser ? getLocalName().slice(0, 10) : "Invitado";
     const statMode = $("#stat-mode");
@@ -241,7 +245,8 @@
     if (!homeList) return;
     const recent = items.slice(0, 4);
     if (!recent.length) {
-      homeList.innerHTML = "<div class=\"empty-feed\">Todavía no hay scripts. Publica el primero desde <strong>Publicar</strong>.</div>";
+      homeList.innerHTML = "<div class=\"empty-feed home-empty\"><span class=\"empty-ico\">⌘</span><strong>Aún no hay scripts</strong><p>Publica el primero y aparecerá aquí.</p><button type=\"button\" class=\"btn-primary empty-cta\" data-go=\"upload\">Publicar ahora</button></div>";
+      homeList.querySelectorAll("[data-go]").forEach(btn => btn.addEventListener("click", () => showPanel(btn.dataset.go)));
       return;
     }
     homeList.innerHTML = recent.map(s => "<article class=\"script-card\">" +
