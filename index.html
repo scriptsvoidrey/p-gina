@@ -35,25 +35,40 @@
 
         <div class="stats">
           <div class="stat">
-            <span class="num" id="stat-scripts">5</span>
+            <span class="num" id="stat-scripts">0</span>
             <span class="lbl">Scripts</span>
           </div>
           <div class="stat">
-            <span class="num">VOID</span>
-            <span class="lbl">Plataforma</span>
+            <span class="num" id="stat-mode">Local</span>
+            <span class="lbl">Modo</span>
           </div>
           <div class="stat">
-            <span class="num" id="stat-members">0</span>
-            <span class="lbl">Publicaciones</span>
+            <span class="num" id="stat-account">—</span>
+            <span class="lbl">Cuenta</span>
           </div>
         </div>
 
+        <div class="home-actions" id="home-actions">
+          <button type="button" class="btn-primary home-cta" data-go="scripts">Ver scripts</button>
+          <button type="button" class="btn-sm home-cta-secondary" data-go="upload">Publicar script</button>
+          <button type="button" class="btn-sm home-cta-secondary" id="home-auth-btn" data-go="auth">Iniciar sesión</button>
+        </div>
+
+        <section class="card home-recent">
+          <div class="home-recent-head">
+            <h2>Scripts recientes</h2>
+            <button type="button" class="btn-sm ghost" data-go="scripts">Ver todos</button>
+          </div>
+          <div id="home-script-list" class="script-grid home-script-grid">
+            <div class="empty-feed">Todavía no hay scripts. Publica el primero desde Publicar.</div>
+          </div>
+        </section>
+
         <article class="card about">
           <h2>Sobre VOID Hub</h2>
-          <p>Espacio creado para compartir scripts, clips y herramientas de la comunidad.</p>
-          <p>Encuentra recursos, comparte contenido y descubre herramientas publicadas por la comunidad.</p>
-          <p>Publica scripts y comparte herramientas con la comunidad.</p>
-          <p class="thanks">Un espacio para compartir y descubrir.</p>
+          <p>Espacio para compartir scripts y herramientas de la comunidad.</p>
+          <p>Los scripts se guardan en este navegador (modo local). Crea una cuenta para asociar tu nombre a lo que publiques.</p>
+          <p class="thanks">Abre Scripts, publica uno o inicia sesión desde arriba.</p>
         </article>
       </section>
 
