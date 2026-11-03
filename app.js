@@ -47,33 +47,39 @@
     document.documentElement.setAttribute("data-theme", themeSelect.value === "void" ? "" : themeSelect.value);
   });
   function escapeHtml(v) {
-    return String(v ?? "").replace(/[&<>"']/g, c => ({ "&": "&", "<": "<", ">": ">", '"': """, "'": "&#39;" }[c]));
+    return String(v ?? "")
+      .replace(/&/g, "&" + "amp;")
+      .replace(/</g, "&" + "lt;")
+      .replace(/>/g, "&" + "gt;")
+      .replace(/"/g, "&" + "quot;")
+      .replace(/'/g, "&#39;");
   }
   function openModal(title, body) {
     $("#void-modal")?.remove();
     const modal = document.createElement("div");
     modal.id = "void-modal";
     modal.className = "void-modal";
-    modal.innerHTML = `<div class=\"void-modal-backdrop\" data-close></div>
-      <section class=\"void-modal-card\" role=\"dialog\" aria-modal=\"true\">
-        <button class=\"void-modal-close\" type=\"button\" data-close>×</button>
-        <h2>${escapeHtml(title)}</h2>
-        <div class=\"void-modal-body\">${body}</div>
-      </section>`;
+    modal.innerHTML = "<div class=\"void-modal-backdrop\" data-close></div>" +
+      "<section class=\"void-modal-card\" role=\"dialog\" aria-modal=\"true\">" +
+      "<button class=\"void-modal-close\" type=\"button\" data-close>×</button>" +
+      "<h2>" + escapeHtml(title) + "</h2>" +
+      "<div class=\"void-modal-body\">" + body + "</div></section>";
     document.body.append(modal);
     modal.querySelectorAll("[data-close]").forEach(b => b.addEventListener("click", () => modal.remove()));
     return modal;
   }
-  function notice(message, title = "VOID Hub") {
-    const m = openModal(title, `<div class=\"notice-content\"><span class=\"notice-mark\">✓</span><p>${escapeHtml(message)}</p></div>
-      <div class=\"modal-actions\"><button type=\"button\" class=\"btn-primary\" data-close>Entendido</button></div>`);
+  function notice(message, title) {
+    title = title || "VOID Hub";
+    const m = openModal(title, "<div class=\"notice-content\"><span class=\"notice-mark\">✓</span><p>" + escapeHtml(message) + "</p></div>" +
+      "<div class=\"modal-actions\"><button type=\"button\" class=\"btn-primary\" data-close>Entendido</button></div>");
     m.querySelectorAll("[data-close]").forEach(b => b.addEventListener("click", () => m.remove()));
   }
-  function askConfirm(message, title = "Confirmar") {
+  function askConfirm(message, title) {
+    title = title || "Confirmar";
     return new Promise(resolve => {
-      const m = openModal(title, `<div class=\"notice-content\"><span class=\"notice-mark warning\">!</span><p>${escapeHtml(message)}</p></div>
-        <div class=\"modal-actions\"><button type=\"button\" class=\"btn-sm\" id=\"cf-no\">Cancelar</button>
-        <button type=\"button\" class=\"btn-primary\" id=\"cf-yes\">Sí, continuar</button></div>`);
+      const m = openModal(title, "<div class=\"notice-content\"><span class=\"notice-mark warning\">!</span><p>" + escapeHtml(message) + "</p></div>" +
+        "<div class=\"modal-actions\"><button type=\"button\" class=\"btn-sm\" id=\"cf-no\">Cancelar</button>" +
+        "<button type=\"button\" class=\"btn-primary\" id=\"cf-yes\">Sí, continuar</button></div>");
       $("#cf-no", m).onclick = () => { m.remove(); resolve(false); };
       $("#cf-yes", m).onclick = () => { m.remove(); resolve(true); };
       m.querySelectorAll("[data-close]").forEach(b => b.addEventListener("click", () => { m.remove(); resolve(false); }));
@@ -95,13 +101,14 @@
     const statMode = $("#stat-mode");
     if (statMode) statMode.textContent = supabaseClient ? "Cloud" : "Local";
   }
-  function authModal(initialTab = "register") {
+  function authModal(initialTab) {
+    initialTab = initialTab || "register";
     if (!supabaseClient) {
       const modal = openModal("Modo local",
-        '<p class="note">Supabase no está configurado. Usa un nombre local en este navegador.</p>' +
-        '<form id="local-name-form" class="auth-form"><label>Nombre local<input id="local-name-input" type="text" maxlength="24" value="' +
-        escapeHtml(getLocalName()) + '" required></label><button class="btn-primary" type="submit">Guardar nombre</button></form>' +
-        '<p class="note">Rellena url y anonKey en supabase-config.js para cuentas reales.</p>');
+        "<p class=\"note\">Supabase no está configurado. Usa un nombre local en este navegador.</p>" +
+        "<form id=\"local-name-form\" class=\"auth-form\"><label>Nombre local<input id=\"local-name-input\" type=\"text\" maxlength=\"24\" value=\"" +
+        escapeHtml(getLocalName()) + "\" required></label><button class=\"btn-primary\" type=\"submit\">Guardar nombre</button></form>" +
+        "<p class=\"note\">Rellena url y anonKey en supabase-config.js para cuentas reales.</p>");
       $("#local-name-form", modal)?.addEventListener("submit", e => {
         e.preventDefault();
         const name = $("#local-name-input", modal).value.trim();
@@ -111,15 +118,15 @@
       });
       return;
     }
-    const markup = '<p class="note">Crea tu cuenta o inicia sesión.</p>' +
-      '<div class="auth-tabs"><button type="button" class="btn-sm auth-tab" data-auth-tab="register">Crear cuenta</button>' +
-      '<button type="button" class="btn-sm auth-tab" data-auth-tab="login">Iniciar sesión</button></div>' +
-      '<form id="register-form" class="auth-form"><label>Nombre<input id="register-name" type="text" minlength="3" maxlength="24" required pattern="[A-Za-z0-9_.-]+"></label>' +
-      '<label>Contraseña<input id="register-password" type="password" minlength="8" required></label>' +
-      '<button class="btn-primary" type="submit">Crear mi cuenta</button></form>' +
-      '<form id="login-form" class="auth-form" hidden><label>Nombre<input id="login-name" type="text" maxlength="24" required></label>' +
-      '<label>Contraseña<input id="login-password" type="password" required></label><button class="btn-primary" type="submit">Entrar</button></form>' +
-      '<p id="auth-message" class="note" role="status"></p>';
+    const markup = "<p class=\"note\">Crea tu cuenta o inicia sesión.</p>" +
+      "<div class=\"auth-tabs\"><button type=\"button\" class=\"btn-sm auth-tab\" data-auth-tab=\"register\">Crear cuenta</button>" +
+      "<button type=\"button\" class=\"btn-sm auth-tab\" data-auth-tab=\"login\">Iniciar sesión</button></div>" +
+      "<form id=\"register-form\" class=\"auth-form\"><label>Nombre<input id=\"register-name\" type=\"text\" minlength=\"3\" maxlength=\"24\" required pattern=\"[A-Za-z0-9_.-]+\"></label>" +
+      "<label>Contraseña<input id=\"register-password\" type=\"password\" minlength=\"8\" required></label>" +
+      "<button class=\"btn-primary\" type=\"submit\">Crear mi cuenta</button></form>" +
+      "<form id=\"login-form\" class=\"auth-form\" hidden><label>Nombre<input id=\"login-name\" type=\"text\" maxlength=\"24\" required></label>" +
+      "<label>Contraseña<input id=\"login-password\" type=\"password\" required></label><button class=\"btn-primary\" type=\"submit\">Entrar</button></form>" +
+      "<p id=\"auth-message\" class=\"note\" role=\"status\"></p>";
     const modal = openModal("Tu cuenta P-GINA", markup);
     const registerForm = $("#register-form", modal), loginForm = $("#login-form", modal), message = $("#auth-message", modal);
     const setTab = tab => {
@@ -131,7 +138,7 @@
     registerForm.addEventListener("submit", async event => {
       event.preventDefault();
       const name = $("#register-name", modal).value.trim(), password = $("#register-password", modal).value;
-      if (!/^[A-Za-z0-9_.-]{3,24}$/.test(name)) { message.textContent = "Usuario: 3–24 caracteres (letras, números, . _ -)."; return; }
+      if (!/^[A-Za-z0-9_.-]{3,24}$/.test(name)) { message.textContent = "Usuario: 3-24 caracteres (letras, números, . _ -)."; return; }
       if (password.length < 8) { message.textContent = "Mínimo 8 caracteres de contraseña."; return; }
       const submit = registerForm.querySelector('button[type="submit"]');
       submit.disabled = true; submit.textContent = "Creando…";
@@ -143,7 +150,7 @@
           return;
         }
         currentUser = result.data.user; localStorage.setItem(NAME_KEY, name);
-        updateAccountUI(); modal.remove(); notice("¡Cuenta creada!");
+        updateAccountUI(); modal.remove(); notice("Cuenta creada");
       } catch (error) {
         message.textContent = error.message || "No se pudo crear la cuenta.";
       } finally { submit.disabled = false; submit.textContent = "Crear mi cuenta"; }
@@ -175,7 +182,7 @@
   $("#btn-account")?.addEventListener("click", () => {
     if (!currentUser) { authModal(); return; }
     const modal = openModal("Tu cuenta", "<p>Sesión como <strong>" + escapeHtml(getLocalName()) +
-      '</strong>.</p><button type="button" class="btn-primary" id="account-signout">Cerrar sesión</button>');
+      "</strong>.</p><button type=\"button\" class=\"btn-primary\" id=\"account-signout\">Cerrar sesión</button>");
     $("#account-signout", modal).addEventListener("click", async () => { modal.remove(); await signOut(); });
   });
   if (supabaseClient) {
@@ -190,15 +197,15 @@
   }
   const scriptList = $("#script-list"), scriptForm = $("#script-upload-form");
   function openScriptModal(s) {
-    const modal = openModal(s.title, `<p>${escapeHtml(s.description || "")}</p><pre class=\"script-code-view\"><code>${escapeHtml(s.code)}</code></pre>
-      <p class=\"note\">Por ${escapeHtml(s.author_name || "Usuario VOID")}</p>`);
+    const modal = openModal(s.title, "<p>" + escapeHtml(s.description || "") + "</p><pre class=\"script-code-view\"><code>" + escapeHtml(s.code) + "</code></pre>" +
+      "<p class=\"note\">Por " + escapeHtml(s.author_name || "Usuario VOID") + "</p>");
     const copy = document.createElement("button");
     copy.className = "btn-primary"; copy.textContent = "Copiar código";
     copy.onclick = async () => {
-      try { await navigator.clipboard.writeText(s.code); copy.textContent = "¡Copiado!"; }
+      try { await navigator.clipboard.writeText(s.code); copy.textContent = "Copiado"; }
       catch {
         const a = document.createElement("textarea"); a.value = s.code; modal.append(a); a.select();
-        document.execCommand("copy"); a.remove(); copy.textContent = "¡Copiado!";
+        document.execCommand("copy"); a.remove(); copy.textContent = "Copiado";
       }
     };
     $(".void-modal-body", modal).append(copy);
@@ -208,23 +215,23 @@
     if (count) count.textContent = String(items.length);
     if (!scriptList) return;
     if (!items.length) {
-      scriptList.innerHTML = '<div class="empty-feed">Todavía no hay scripts. Publica el primero desde Subir.</div>';
+      scriptList.innerHTML = "<div class=\"empty-feed\">Todavía no hay scripts. Publica el primero desde Subir.</div>";
       return;
     }
     const myId = getLocalId();
-    scriptList.innerHTML = items.map(s => `<article class=\"script-card\">
-      <div class=\"script-icon\">⌘</div>
-      <div class=\"script-info\"><h3>${escapeHtml(s.title)}</h3>
-      <p>${escapeHtml(s.description || "Script de la comunidad")}</p>
-      <small>${escapeHtml(s.author_name || "Usuario VOID")}</small></div>
-      <button class=\"btn-sm\" type=\"button\" data-open-script=\"${s.id}\">Abrir</button>
-      ${s.author_id === myId ? `<button class=\"btn-sm danger-btn\" type=\"button\" data-delete-script=\"${s.id}\">Eliminar</button>` : ""}
-    </article>`).join("");
+    scriptList.innerHTML = items.map(s => "<article class=\"script-card\">" +
+      "<div class=\"script-icon\">⌘</div>" +
+      "<div class=\"script-info\"><h3>" + escapeHtml(s.title) + "</h3>" +
+      "<p>" + escapeHtml(s.description || "Script de la comunidad") + "</p>" +
+      "<small>" + escapeHtml(s.author_name || "Usuario VOID") + "</small></div>" +
+      "<button class=\"btn-sm\" type=\"button\" data-open-script=\"" + s.id + "\">Abrir</button>" +
+      (s.author_id === myId ? "<button class=\"btn-sm danger-btn\" type=\"button\" data-delete-script=\"" + s.id + "\">Eliminar</button>" : "") +
+      "</article>").join("");
     scriptList.querySelectorAll("[data-open-script]").forEach(b => b.addEventListener("click", () => {
       const s = items.find(x => x.id === b.dataset.openScript); if (s) openScriptModal(s);
     }));
     scriptList.querySelectorAll("[data-delete-script]").forEach(b => b.addEventListener("click", async () => {
-      if (!(await askConfirm("¿Eliminar este script?", "Eliminar"))) return;
+      if (!(await askConfirm("Eliminar este script?", "Eliminar"))) return;
       const list = loadLocalScripts().filter(s => s.id !== b.dataset.deleteScript);
       saveLocalScripts(list); renderScripts(list); renderHomeScripts(list); notice("Script eliminado.");
     }));
@@ -234,16 +241,15 @@
     if (!homeList) return;
     const recent = items.slice(0, 4);
     if (!recent.length) {
-      homeList.innerHTML = '<div class="empty-feed">Todavía no hay scripts. Publica el primero desde <strong>Publicar</strong>.</div>';
+      homeList.innerHTML = "<div class=\"empty-feed\">Todavía no hay scripts. Publica el primero desde <strong>Publicar</strong>.</div>";
       return;
     }
-    homeList.innerHTML = recent.map(s => `<article class=\"script-card\">
-      <div class=\"script-icon\">⌘</div>
-      <div class=\"script-info\"><h3>${escapeHtml(s.title)}</h3>
-      <p>${escapeHtml(s.description || "Script de la comunidad")}</p>
-      <small>${escapeHtml(s.author_name || "Usuario VOID")}</small></div>
-      <button class=\"btn-sm\" type=\"button\" data-open-script=\"${s.id}\">Abrir</button>
-    </article>`).join("");
+    homeList.innerHTML = recent.map(s => "<article class=\"script-card\">" +
+      "<div class=\"script-icon\">⌘</div>" +
+      "<div class=\"script-info\"><h3>" + escapeHtml(s.title) + "</h3>" +
+      "<p>" + escapeHtml(s.description || "Script de la comunidad") + "</p>" +
+      "<small>" + escapeHtml(s.author_name || "Usuario VOID") + "</small></div>" +
+      "<button class=\"btn-sm\" type=\"button\" data-open-script=\"" + s.id + "\">Abrir</button></article>").join("");
     homeList.querySelectorAll("[data-open-script]").forEach(b => b.addEventListener("click", () => {
       const s = items.find(x => x.id === b.dataset.openScript); if (s) openScriptModal(s);
     }));
